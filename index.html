@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>QR Video Call</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>QR Video Call</h1>
+      <p>Connect two phones with a room QR code.</p>
+    </header>
+
+    <section class="card">
+      <div class="row">
+        <input id="roomInput" maxlength="40" placeholder="Enter room code">
+        <button id="createBtn">Create Room</button>
+      </div>
+
+      <div id="qrBox" class="qr-box hidden">
+        <div id="qrcode"></div>
+        <small>Scan this QR from the second phone.</small>
+      </div>
+
+      <div class="row">
+        <button id="joinBtn">Join Room</button>
+        <button id="scanBtn" class="secondary">Scan QR</button>
+      </div>
+
+      <div id="scanner" class="hidden"></div>
+      <p id="status" class="status">Not connected.</p>
+    </section>
+
+    <section class="videos">
+      <div class="video-card">
+        <span>You</span>
+        <video id="localVideo" autoplay muted playsinline></video>
+      </div>
+      <div class="video-card">
+        <span>Other phone</span>
+        <video id="remoteVideo" autoplay playsinline></video>
+      </div>
+    </section>
+
+    <section class="controls">
+      <button id="cameraBtn">Start Camera</button>
+      <button id="micBtn">Mute Mic</button>
+      <button id="endBtn" class="danger">End Call</button>
+    </section>
+
+    <p class="note">
+      Camera access requires HTTPS (or localhost). The server only handles
+      signaling; the live media is sent using WebRTC.
+    </p>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode" defer></script>
+  <script src="/app.js" defer></script>
+</body>
+</html>
