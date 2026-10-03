@@ -7,67 +7,209 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// GitHub repo ke root se website files serve karega
+const MAX_USERS_PER_ROOM = 10;
+
+// Serve website files from repository root
 app.use(express.static(__dirname));
 
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+    res.sendFile(
+        path.join(__dirname, "index.html")
+    );
 });
+
+
+// ===============================
+// SOCKET CONNECTION
+// ===============================
 
 io.on("connection", (socket) => {
-  socket.on("join-room", ({ room }) => {
-    if (!room) return;
 
-    const roomName = room.trim().toUpperCase();
+    console.log(
+        "User connected:",
+        socket.id
+    );
 
-    const size = io.sockets.adapter.rooms.get(roomName)?.size || 0;
 
-    if (size >= 2) {
-      socket.emit("room-full");
-      return;
-    }
+    // ===============================
+    // JOIN ROOM
+    // ===============================
 
-    socket.join(roomName);
-    socket.data.room = roomName;
+    socket.on("join-room", ({ room }) => {
 
-    const count = io.sockets.adapter.rooms.get(roomName)?.size || 1;
+        if (!room) {
+            return;
+        }
 
-    socket.emit("room-joined", {
-      room: roomName,
-      count
+        const roomName =
+            room
+                .trim()
+                .toUpperCase();
+
+        const roomSet =
+            io.sockets.adapter.rooms.get(
+                roomName
+            );
+
+        const currentUsers =
+            roomSet
+                ? roomSet.size
+                : 0;
+
+
+        // Maximum 10 users
+        if (
+            currentUsers >=
+            MAX_USERS_PER_ROOM
+        ) {
+
+            socket.emit(
+                "room-full"
+            );
+
+            return;
+        }
+
+
+        // Get users already inside
+        const existingUsers =
+            roomSet
+                ? Array.from(roomSet)
+                : [];
+
+
+        socket.join(roomName);
+
+        socket.data.room =
+            roomName;
+
+
+        const newCount =
+            existingUsers.length + 1;
+
+
+        // Tell new user about existing users
+        socket.emit(
+            "room-joined",
+            {
+                room: roomName,
+                count: newCount,
+                users: existingUsers
+            }
+        );
+
+
+        // Tell existing users that
+        // a new user has joined
+        socket.to(roomName).emit(
+            "peer-joined",
+            {
+                peerId: socket.id
+            }
+        );
+
+
+        console.log(
+            `${socket.id} joined ${roomName} (${newCount}/10)`
+        );
     });
 
-    if (count === 2) {
-      socket.to(roomName).emit("peer-joined");
-    }
-  });
 
-  socket.on("signal", ({ room, data }) => {
-    if (!room || !data) return;
-    socket.to(room).emit("signal", data);
-  });
+    // ===============================
+    // WEBRTC SIGNAL
+    // ===============================
 
-  socket.on("leave-room", () => {
-    const room = socket.data.room;
+    socket.on(
+        "signal",
+        ({ target, data }) => {
 
-    if (room) {
-      socket.leave(room);
-      socket.to(room).emit("peer-left");
-      socket.data.room = null;
-    }
-  });
+            if (!target || !data) {
+                return;
+            }
 
-  socket.on("disconnect", () => {
-    const room = socket.data.room;
+            io.to(target).emit(
+                "signal",
+                {
+                    sender: socket.id,
+                    data: data
+                }
+            );
+        }
+    );
 
-    if (room) {
-      socket.to(room).emit("peer-left");
-    }
-  });
+
+    // ===============================
+    // LEAVE ROOM
+    // ===============================
+
+    socket.on(
+        "leave-room",
+        () => {
+
+            leaveRoom(socket);
+        }
+    );
+
+
+    // ===============================
+    // DISCONNECT
+    // ===============================
+
+    socket.on(
+        "disconnect",
+        () => {
+
+            leaveRoom(socket);
+
+            console.log(
+                "User disconnected:",
+                socket.id
+            );
+        }
+    );
 });
 
-const PORT = process.env.PORT || 10000;
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// ===============================
+// LEAVE ROOM FUNCTION
+// ===============================
+
+function leaveRoom(socket) {
+
+    const room =
+        socket.data.room;
+
+    if (!room) {
+        return;
+    }
+
+    socket.to(room).emit(
+        "peer-left",
+        {
+            peerId: socket.id
+        }
+    );
+
+    socket.leave(room);
+
+    socket.data.room = null;
+}
+
+
+// ===============================
+// SERVER
+// ===============================
+
+const PORT =
+    process.env.PORT || 10000;
+
+server.listen(
+    PORT,
+    "0.0.0.0",
+    () => {
+
+        console.log(
+            `Server running on port ${PORT}`
+        );
+    }
+);
