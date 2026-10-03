@@ -1,20 +1,32 @@
 const socket = io();
 
+
+// ============================================
+// GLOBAL VARIABLES
+// ============================================
+
 let roomCode = "";
+
 let localStream = null;
+
 let currentFacingMode = "user";
+
 let isMuted = false;
 
-let currentCallTarget = null;
 let incomingCallerId = null;
 
-// One peer only because room has 2 users
+let incomingCallerRoom = null;
+
+let callInProgress = false;
+
+
+// WebRTC peers
 const peers = {};
 
 
-// ===============================
-// ELEMENTS
-// ===============================
+// ============================================
+// HTML ELEMENTS
+// ============================================
 
 const roomInput =
     document.getElementById("roomInput");
@@ -55,25 +67,53 @@ const micBtn =
 const endBtn =
     document.getElementById("endBtn");
 
+const notificationBtn =
+    document.getElementById(
+        "notificationBtn"
+    );
 
-// ===============================
-// WEBRTC
-// ===============================
+const incomingCallOverlay =
+    document.getElementById(
+        "incomingCallOverlay"
+    );
+
+const incomingCallerText =
+    document.getElementById(
+        "incomingCallerText"
+    );
+
+const acceptCallBtn =
+    document.getElementById(
+        "acceptCallBtn"
+    );
+
+const rejectCallBtn =
+    document.getElementById(
+        "rejectCallBtn"
+    );
+
+
+// ============================================
+// WEBRTC CONFIG
+// ============================================
 
 const rtcConfig = {
 
     iceServers: [
+
         {
             urls:
                 "stun:stun.l.google.com:19302"
         }
+
     ]
+
 };
 
 
-// ===============================
+// ============================================
 // PERMANENT ROOM ID
-// ===============================
+// ============================================
 
 function getPermanentRoomCode() {
 
@@ -93,6 +133,7 @@ function getPermanentRoomCode() {
 
     const chars =
         "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
 
     let code = "";
 
@@ -123,9 +164,9 @@ function getPermanentRoomCode() {
 }
 
 
-// ===============================
-// SHOW MY PERMANENT ROOM
-// ===============================
+// ============================================
+// SHOW OWN ROOM ID
+// ============================================
 
 function showPermanentRoom() {
 
@@ -140,60 +181,123 @@ function showPermanentRoom() {
     roomInput.readOnly =
         true;
 
-
     roomInput.setAttribute(
         "readonly",
         "readonly"
     );
-
-
-    roomInput.placeholder =
-        "Your Room ID";
 }
 
 
 showPermanentRoom();
 
 
-// ===============================
-// CREATE / SHOW QR
-// ===============================
+// ============================================
+// AUTO REGISTER OWN ROOM
+// ============================================
 
-createBtn.addEventListener(
-    "click",
-    async () => {
+function joinOwnRoom() {
 
-        roomCode =
-            getPermanentRoomCode();
+    const ownRoom =
+        getPermanentRoomCode();
 
 
-        roomInput.value =
-            roomCode;
+    roomCode =
+        ownRoom;
 
 
-        roomInput.readOnly =
-            true;
+    roomInput.value =
+        ownRoom;
 
 
-        createQRCode(
-            roomCode
+    roomInput.readOnly =
+        true;
+
+
+    socket.emit(
+        "join-room",
+        {
+            room:
+                ownRoom
+        }
+    );
+}
+
+
+// ============================================
+// SOCKET CONNECT
+// ============================================
+
+socket.on(
+    "connect",
+    () => {
+
+        console.log(
+            "Socket connected:",
+            socket.id
         );
 
 
-        // Join own permanent room
-        await joinOwnRoom();
+        setTimeout(
+            () => {
 
+                joinOwnRoom();
 
-        setStatus(
-            "Your Room ID is ready. Share it with the other person."
+            },
+            300
         );
     }
 );
 
 
-// ===============================
-// QR CODE
-// ===============================
+// ============================================
+// STATUS
+// ============================================
+
+function setStatus(text) {
+
+    status.textContent =
+        text;
+}
+
+
+// ============================================
+// CREATE ROOM / QR
+// ============================================
+
+createBtn.addEventListener(
+    "click",
+    () => {
+
+        const ownRoom =
+            getPermanentRoomCode();
+
+
+        roomCode =
+            ownRoom;
+
+
+        roomInput.value =
+            ownRoom;
+
+
+        createQRCode(
+            ownRoom
+        );
+
+
+        joinOwnRoom();
+
+
+        setStatus(
+            "Your room is ready."
+        );
+    }
+);
+
+
+// ============================================
+// CREATE QR CODE
+// ============================================
 
 function createQRCode(code) {
 
@@ -204,7 +308,9 @@ function createQRCode(code) {
         window.location.origin +
         window.location.pathname +
         "?room=" +
-        encodeURIComponent(code);
+        encodeURIComponent(
+            code
+        );
 
 
     new QRCode(
@@ -228,37 +334,24 @@ function createQRCode(code) {
 }
 
 
-// ===============================
-// JOIN BUTTON = CALL
-// ===============================
+// ============================================
+// JOIN ROOM BUTTON
+// ============================================
 
 joinBtn.addEventListener(
     "click",
-    async () => {
-
-        const targetRoom =
-            prompt(
-                "Jise call karna hai uski Room ID enter karo:"
-            );
-
-
-        if (!targetRoom) {
-            return;
-        }
-
+    () => {
 
         const code =
-            targetRoom
+            roomInput.value
                 .trim()
                 .toUpperCase();
 
 
-        if (
-            code.length < 4
-        ) {
+        if (!code) {
 
             alert(
-                "Valid Room ID enter karo."
+                "Room ID nahi mila."
             );
 
             return;
@@ -270,164 +363,163 @@ joinBtn.addEventListener(
             getPermanentRoomCode()
         ) {
 
-            alert(
-                "Apni Room ID par call nahi kar sakte."
+            joinOwnRoom();
+
+            setStatus(
+                "Your own room connected."
             );
 
             return;
         }
 
 
-        // Make sure caller is
-        // connected to own room
-        await joinOwnRoom();
-
-
-        // Send call request
-        currentCallTarget =
-            code;
-
-
-        socket.emit(
-            "call-user",
-            {
-                room:
-                    code
-            }
-        );
-
-
-        setStatus(
-            "Calling " + code + "..."
+        joinTargetRoom(
+            code
         );
     }
 );
 
 
-// ===============================
-// JOIN MY OWN ROOM
-// ===============================
+// ============================================
+// JOIN TARGET ROOM
+// ============================================
 
-async function joinOwnRoom() {
+function joinTargetRoom(code) {
 
-    const myRoom =
-        getPermanentRoomCode();
+    const targetRoom =
+        code
+            .trim()
+            .toUpperCase();
 
 
-    roomCode =
-        myRoom;
+    if (!targetRoom) {
+        return;
+    }
 
 
     roomInput.value =
-        myRoom;
+        targetRoom;
 
 
     roomInput.readOnly =
         true;
 
 
-    if (
-        socket.connected &&
-        socket.__joinedRoom === myRoom
-    ) {
-
-        return;
-    }
-
-
-    socket.emit(
-        "join-room",
-        {
-            room:
-                myRoom
-        }
+    setStatus(
+        "Calling Room " +
+        targetRoom +
+        "..."
     );
 
 
-    socket.__joinedRoom =
-        myRoom;
+    socket.emit(
+        "call-user",
+        {
+            room:
+                targetRoom
+        }
+    );
 }
 
 
-// ===============================
-// STATUS
-// ===============================
-
-function setStatus(text) {
-
-    status.textContent =
-        text;
-}
-
-
-// ===============================
+// ============================================
 // ROOM JOINED
-// ===============================
+// ============================================
 
 socket.on(
     "room-joined",
-    ({
+    async ({
         room,
         count
     }) => {
 
-        roomCode =
-            room;
+        console.log(
+            "Room joined:",
+            room,
+            count
+        );
 
 
-        roomInput.value =
-            room;
+        if (
+            room ===
+            getPermanentRoomCode()
+        ) {
+
+            roomCode =
+                room;
 
 
-        roomInput.readOnly =
-            true;
+            roomInput.value =
+                room;
+
+
+            roomInput.readOnly =
+                true;
+
+
+            setStatus(
+                "Your Room is online."
+            );
+
+            return;
+        }
 
 
         setStatus(
-            `Your room is ready (${count}/2)`
+            `Room connected (${count}/2)`
         );
+
+
+        if (!localStream) {
+
+            await startCamera();
+        }
     }
 );
 
 
-// ===============================
+// ============================================
 // ROOM FULL
-// ===============================
+// ============================================
 
 socket.on(
     "room-full",
     () => {
 
         setStatus(
-            "Room full hai."
+            "Room is full."
         );
 
 
         alert(
-            "Is Room ID par already 2 users connected hain."
+            "Is room mein already 2 people connected hain."
         );
     }
 );
 
 
-// ===============================
+// ============================================
 // CALL RINGING
-// ===============================
+// ============================================
 
 socket.on(
     "call-ringing",
-    () => {
+    ({
+        room
+    }) => {
 
         setStatus(
-            "Calling... receiver ke Accept karne ka wait hai."
+            "Calling Room " +
+            room +
+            "..."
         );
     }
 );
 
 
-// ===============================
+// ============================================
 // CALL UNAVAILABLE
-// ===============================
+// ============================================
 
 socket.on(
     "call-unavailable",
@@ -435,352 +527,143 @@ socket.on(
         room
     }) => {
 
-        currentCallTarget =
-            null;
-
-
         setStatus(
-            "User online nahi hai."
+            "Room " +
+            room +
+            " is not available."
         );
 
 
         alert(
-            `Room ${room} mein abhi koi available nahi hai.`
+            "Ye Room ID abhi available nahi hai."
         );
     }
 );
 
 
-// ===============================
-// INCOMING CALL UI
-// ===============================
-
-function showIncomingCall(
-    callerId,
-    callerRoom
-) {
-
-    incomingCallerId =
-        callerId;
-
-
-    // Existing overlay remove
-    const old =
-        document.getElementById(
-            "incomingCallOverlay"
-        );
-
-
-    if (old) {
-        old.remove();
-    }
-
-
-    const overlay =
-        document.createElement(
-            "div"
-        );
-
-
-    overlay.id =
-        "incomingCallOverlay";
-
-
-    overlay.style.position =
-        "fixed";
-
-    overlay.style.inset =
-        "0";
-
-    overlay.style.zIndex =
-        "999999";
-
-    overlay.style.background =
-        "#111827";
-
-    overlay.style.display =
-        "flex";
-
-    overlay.style.flexDirection =
-        "column";
-
-    overlay.style.alignItems =
-        "center";
-
-    overlay.style.justifyContent =
-        "center";
-
-    overlay.style.padding =
-        "30px";
-
-    overlay.style.color =
-        "white";
-
-    overlay.style.textAlign =
-        "center";
-
-
-    overlay.innerHTML = `
-
-        <div style="
-            width:90px;
-            height:90px;
-            border-radius:50%;
-            background:#374151;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-size:42px;
-            margin-bottom:25px;
-        ">
-            📹
-        </div>
-
-        <h1 style="
-            margin:0 0 10px;
-            font-size:30px;
-        ">
-            Incoming Video Call
-        </h1>
-
-        <p style="
-            margin:0 0 8px;
-            font-size:18px;
-        ">
-            Someone is calling you
-        </p>
-
-        <p style="
-            margin:0 0 45px;
-            opacity:.7;
-            font-size:14px;
-        ">
-            Room: ${callerRoom || "Unknown"}
-        </p>
-
-        <div style="
-            display:flex;
-            gap:18px;
-            width:100%;
-            max-width:420px;
-        ">
-
-            <button id="rejectCallBtn"
-                style="
-                    flex:1;
-                    border:0;
-                    border-radius:14px;
-                    padding:18px 10px;
-                    font-size:18px;
-                    font-weight:bold;
-                    background:#dc2626;
-                    color:white;
-                ">
-                ✕ Reject
-            </button>
-
-            <button id="acceptCallBtn"
-                style="
-                    flex:1;
-                    border:0;
-                    border-radius:14px;
-                    padding:18px 10px;
-                    font-size:18px;
-                    font-weight:bold;
-                    background:#16a34a;
-                    color:white;
-                ">
-                ✓ Accept
-            </button>
-
-        </div>
-    `;
-
-
-    document.body.appendChild(
-        overlay
-    );
-
-
-    document
-        .getElementById(
-            "acceptCallBtn"
-        )
-        .addEventListener(
-            "click",
-            acceptIncomingCall
-        );
-
-
-    document
-        .getElementById(
-            "rejectCallBtn"
-        )
-        .addEventListener(
-            "click",
-            rejectIncomingCall
-        );
-}
-
-
-// ===============================
-// INCOMING CALL EVENT
-// ===============================
+// ============================================
+// INCOMING CALL
+// ============================================
 
 socket.on(
     "incoming-call",
     ({
         callerId,
-        callerRoom
+        callerRoom,
+        targetRoom
     }) => {
 
-        showIncomingCall(
-            callerId,
+        incomingCallerId =
+            callerId;
+
+
+        incomingCallerRoom =
+            callerRoom;
+
+
+        console.log(
+            "Incoming call:",
+            callerId
+        );
+
+
+        incomingCallerText.textContent =
             callerRoom
-        );
-    }
-);
+                ? `Room ${callerRoom} is calling you`
+                : "Someone is calling you";
 
 
-// ===============================
-// ACCEPT
-// ===============================
-
-async function acceptIncomingCall() {
-
-    const callerId =
-        incomingCallerId;
-
-
-    if (!callerId) {
-        return;
-    }
-
-
-    removeIncomingCall();
-
-
-    // Start camera only after
-    // accepting the call
-    if (!localStream) {
-
-        await startCamera();
-    }
-
-
-    socket.emit(
-        "accept-call",
-        {
-            callerId:
-                callerId
-        }
-    );
-
-
-    setStatus(
-        "Call accepted. Connecting..."
-    );
-}
-
-
-// ===============================
-// REJECT
-// ===============================
-
-function rejectIncomingCall() {
-
-    const callerId =
-        incomingCallerId;
-
-
-    if (callerId) {
-
-        socket.emit(
-            "reject-call",
-            {
-                callerId:
-                    callerId
-            }
-        );
-    }
-
-
-    removeIncomingCall();
-
-
-    incomingCallerId =
-        null;
-
-
-    setStatus(
-        "Call rejected."
-    );
-}
-
-
-// ===============================
-// REMOVE CALL UI
-// ===============================
-
-function removeIncomingCall() {
-
-    const overlay =
-        document.getElementById(
-            "incomingCallOverlay"
-        );
-
-
-    if (overlay) {
-        overlay.remove();
-    }
-}
-
-
-// ===============================
-// CALL ACCEPTED
-// ===============================
-
-socket.on(
-    "call-accepted",
-    async ({
-        target
-    }) => {
-
-        currentCallTarget =
-            target;
-
-
-        // Start camera now
-        if (!localStream) {
-
-            await startCamera();
-        }
-
-
-        // Caller creates offer
-        await createPeer(
-            target,
-            true
+        incomingCallOverlay.classList.remove(
+            "hidden"
         );
 
 
         setStatus(
-            "Call accepted. Connecting video..."
+            "Incoming video call..."
         );
     }
 );
 
 
-// ===============================
-// CALL REJECTED
-// ===============================
+// ============================================
+// ACCEPT CALL
+// ============================================
 
-socket.on(
-    "call-rejected",
+acceptCallBtn.addEventListener(
+    "click",
+    async () => {
+
+        if (
+            !incomingCallerId
+        ) {
+            return;
+        }
+
+
+        const caller =
+            incomingCallerId;
+
+
+        hideIncomingCall();
+
+
+        try {
+
+            await startCamera();
+
+        } catch (error) {
+
+            console.error(
+                error
+            );
+
+            return;
+        }
+
+
+        socket.emit(
+            "accept-call",
+            {
+                callerId:
+                    caller
+            }
+        );
+
+
+        callInProgress =
+            true;
+
+
+        setStatus(
+            "Call accepted. Connecting..."
+        );
+    }
+);
+
+
+// ============================================
+// REJECT CALL
+// ============================================
+
+rejectCallBtn.addEventListener(
+    "click",
     () => {
 
-        currentCallTarget =
-            null;
+        if (
+            incomingCallerId
+        ) {
+
+            socket.emit(
+                "reject-call",
+                {
+                    callerId:
+                        incomingCallerId
+                }
+            );
+        }
+
+
+        hideIncomingCall();
 
 
         setStatus(
@@ -788,16 +671,263 @@ socket.on(
         );
 
 
+        incomingCallerId =
+            null;
+
+
+        incomingCallerRoom =
+            null;
+    }
+);
+
+
+// ============================================
+// HIDE INCOMING CALL
+// ============================================
+
+function hideIncomingCall() {
+
+    incomingCallOverlay.classList.add(
+        "hidden"
+    );
+}
+
+
+// ============================================
+// CALL ACCEPTED
+// ============================================
+
+socket.on(
+    "call-accepted",
+    async ({
+        target
+    }) => {
+
+        if (!target) {
+            return;
+        }
+
+
+        setStatus(
+            "Call accepted. Connecting video..."
+        );
+
+
+        if (!localStream) {
+
+            await startCamera();
+        }
+
+
+        const peer =
+            await createPeer(
+                target,
+                true
+            );
+
+
+        callInProgress =
+            true;
+    }
+);
+
+
+// ============================================
+// CALL REJECTED
+// ============================================
+
+socket.on(
+    "call-rejected",
+    () => {
+
+        setStatus(
+            "Call rejected."
+        );
+
+
         alert(
-            "Receiver ne call reject kar diya."
+            "The other person rejected the call."
         );
     }
 );
 
 
-// ===============================
+// ============================================
+// CREATE WEBRTC PEER
+// ============================================
+
+async function createPeer(
+    peerId,
+    createOffer
+) {
+
+    if (
+        peers[peerId]
+    ) {
+
+        return peers[peerId];
+    }
+
+
+    const peer =
+        new RTCPeerConnection(
+            rtcConfig
+        );
+
+
+    peers[peerId] =
+        peer;
+
+
+    // Add local tracks
+    if (localStream) {
+
+        localStream
+            .getTracks()
+            .forEach(
+                track => {
+
+                    peer.addTrack(
+                        track,
+                        localStream
+                    );
+                }
+            );
+    }
+
+
+    // ICE
+    peer.onicecandidate =
+        event => {
+
+            if (
+                event.candidate
+            ) {
+
+                socket.emit(
+                    "signal",
+                    {
+                        target:
+                            peerId,
+
+                        data: {
+                            type:
+                                "candidate",
+
+                            candidate:
+                                event.candidate
+                        }
+                    }
+                );
+            }
+        };
+
+
+    // Remote video
+    peer.ontrack =
+        event => {
+
+            if (
+                event.streams &&
+                event.streams[0]
+            ) {
+
+                remoteVideo.srcObject =
+                    event.streams[0];
+
+
+                remoteVideo
+                    .play()
+                    .catch(
+                        () => {}
+                    );
+
+
+                setStatus(
+                    "Video connected."
+                );
+            }
+        };
+
+
+    peer.onconnectionstatechange =
+        () => {
+
+            console.log(
+                "Connection:",
+                peer.connectionState
+            );
+
+
+            if (
+                peer.connectionState ===
+                "connected"
+            ) {
+
+                setStatus(
+                    "Video connected."
+                );
+
+                callInProgress =
+                    true;
+            }
+
+
+            if (
+                peer.connectionState ===
+                "failed"
+            ) {
+
+                setStatus(
+                    "Connection failed."
+                );
+            }
+
+
+            if (
+                peer.connectionState ===
+                "disconnected"
+            ) {
+
+                setStatus(
+                    "Video disconnected."
+                );
+            }
+        };
+
+
+    // Create offer
+    if (createOffer) {
+
+        const offer =
+            await peer.createOffer();
+
+
+        await peer.setLocalDescription(
+            offer
+        );
+
+
+        socket.emit(
+            "signal",
+            {
+                target:
+                    peerId,
+
+                data:
+                    peer.localDescription
+            }
+        );
+    }
+
+
+    return peer;
+}
+
+
+// ============================================
 // WEBRTC SIGNAL
-// ===============================
+// ============================================
 
 socket.on(
     "signal",
@@ -822,6 +952,7 @@ socket.on(
             }
 
 
+            // OFFER
             if (
                 data.type ===
                 "offer"
@@ -861,6 +992,7 @@ socket.on(
             }
 
 
+            // ANSWER
             else if (
                 data.type ===
                 "answer"
@@ -879,6 +1011,7 @@ socket.on(
             }
 
 
+            // ICE CANDIDATE
             else if (
                 data.type ===
                 "candidate"
@@ -921,170 +1054,9 @@ socket.on(
 );
 
 
-// ===============================
-// CREATE PEER
-// ===============================
-
-async function createPeer(
-    peerId,
-    createOffer
-) {
-
-    if (
-        peers[peerId]
-    ) {
-
-        return peers[peerId];
-    }
-
-
-    const peer =
-        new RTCPeerConnection(
-            rtcConfig
-        );
-
-
-    peers[peerId] =
-        peer;
-
-
-    // LOCAL TRACKS
-    if (localStream) {
-
-        localStream
-            .getTracks()
-            .forEach(
-                track => {
-
-                    peer.addTrack(
-                        track,
-                        localStream
-                    );
-                }
-            );
-    }
-
-
-    // ICE
-    peer.onicecandidate =
-        event => {
-
-            if (
-                event.candidate
-            ) {
-
-                socket.emit(
-                    "signal",
-                    {
-                        target:
-                            peerId,
-
-                        data: {
-
-                            type:
-                                "candidate",
-
-                            candidate:
-                                event.candidate
-                        }
-                    }
-                );
-            }
-        };
-
-
-    // REMOTE VIDEO
-    peer.ontrack =
-        event => {
-
-            if (
-                event.streams &&
-                event.streams[0]
-            ) {
-
-                remoteVideo.srcObject =
-                    event.streams[0];
-
-
-                remoteVideo
-                    .play()
-                    .catch(
-                        () => {}
-                    );
-
-
-                setStatus(
-                    "Video connected."
-                );
-            }
-        };
-
-
-    // CONNECTION STATE
-    peer.onconnectionstatechange =
-        () => {
-
-            console.log(
-                peerId,
-                peer.connectionState
-            );
-
-
-            if (
-                peer.connectionState ===
-                "connected"
-            ) {
-
-                setStatus(
-                    "Video connected."
-                );
-            }
-
-
-            if (
-                peer.connectionState ===
-                "failed"
-            ) {
-
-                setStatus(
-                    "Connection failed."
-                );
-            }
-        };
-
-
-    // CREATE OFFER
-    if (createOffer) {
-
-        const offer =
-            await peer.createOffer();
-
-
-        await peer.setLocalDescription(
-            offer
-        );
-
-
-        socket.emit(
-            "signal",
-            {
-                target:
-                    peerId,
-
-                data:
-                    peer.localDescription
-            }
-        );
-    }
-
-
-    return peer;
-}
-
-
-// ===============================
+// ============================================
 // START CAMERA
-// ===============================
+// ============================================
 
 cameraBtn.addEventListener(
     "click",
@@ -1101,28 +1073,29 @@ async function startCamera() {
 
 
         const newStream =
-            await navigator
-                .mediaDevices
-                .getUserMedia({
-
+            await navigator.mediaDevices.getUserMedia(
+                {
                     video: {
-
                         facingMode: {
                             ideal:
                                 currentFacingMode
                         },
 
                         width: {
-                            ideal: 1280
+                            ideal:
+                                1280
                         },
 
                         height: {
-                            ideal: 720
+                            ideal:
+                                720
                         }
                     },
 
-                    audio: true
-                });
+                    audio:
+                        true
+                }
+            );
 
 
         localStream =
@@ -1144,7 +1117,7 @@ async function startCamera() {
             );
 
 
-        // Replace existing tracks
+        // Replace tracks in existing peers
         for (
             const peerId in peers
         ) {
@@ -1174,10 +1147,9 @@ async function startCamera() {
                 videoTrack
             ) {
 
-                await videoSender
-                    .replaceTrack(
-                        videoTrack
-                    );
+                await videoSender.replaceTrack(
+                    videoTrack
+                );
             }
 
 
@@ -1202,10 +1174,9 @@ async function startCamera() {
                 audioTrack
             ) {
 
-                await audioSender
-                    .replaceTrack(
-                        audioTrack
-                    );
+                await audioSender.replaceTrack(
+                    audioTrack
+                );
             }
         }
 
@@ -1234,21 +1205,22 @@ async function startCamera() {
     ) {
 
         console.error(
+            "Camera error:",
             error
         );
 
 
         alert(
-            "Camera start nahi hua:\n" +
+            "Camera/Microphone start nahi hua:\n" +
             error.message
         );
     }
 }
 
 
-// ===============================
+// ============================================
 // SWITCH CAMERA
-// ===============================
+// ============================================
 
 const switchCameraBtn =
     document.createElement(
@@ -1262,6 +1234,10 @@ switchCameraBtn.textContent =
 
 switchCameraBtn.type =
     "button";
+
+
+switchCameraBtn.className =
+    "secondary";
 
 
 cameraBtn.parentNode.insertBefore(
@@ -1286,9 +1262,9 @@ switchCameraBtn.addEventListener(
 );
 
 
-// ===============================
-// MIC
-// ===============================
+// ============================================
+// MICROPHONE
+// ============================================
 
 micBtn.addEventListener(
     "click",
@@ -1297,7 +1273,7 @@ micBtn.addEventListener(
         if (!localStream) {
 
             alert(
-                "Pehle call accept karo ya camera start karo."
+                "Pehle camera start karo."
             );
 
             return;
@@ -1305,11 +1281,12 @@ micBtn.addEventListener(
 
 
         const tracks =
-            localStream
-                .getAudioTracks();
+            localStream.getAudioTracks();
 
 
-        if (!tracks.length) {
+        if (
+            !tracks.length
+        ) {
             return;
         }
 
@@ -1335,124 +1312,103 @@ micBtn.addEventListener(
 );
 
 
-// ===============================
+// ============================================
 // END CALL
-// ===============================
+// ============================================
 
 endBtn.addEventListener(
     "click",
-    () => {
-
-        for (
-            const peerId in peers
-        ) {
-
-            peers[peerId].close();
-
-            delete peers[peerId];
-        }
-
-
-        if (localStream) {
-
-            localStream
-                .getTracks()
-                .forEach(
-                    track =>
-                        track.stop()
-                );
-
-            localStream =
-                null;
-        }
-
-
-        localVideo.srcObject =
-            null;
-
-        remoteVideo.srcObject =
-            null;
-
-
-        currentCallTarget =
-            null;
-
-        incomingCallerId =
-            null;
-
-
-        removeIncomingCall();
-
-
-        socket.emit(
-            "leave-room"
-        );
-
-
-        socket.__joinedRoom =
-            null;
-
-
-        cameraBtn.textContent =
-            "Start Camera";
-
-
-        micBtn.textContent =
-            "Mute Mic";
-
-
-        setStatus(
-            "Call ended."
-        );
-
-
-        // Rejoin own permanent room
-        setTimeout(
-            () => {
-
-                joinOwnRoom();
-
-            },
-            500
-        );
-    }
+    endCall
 );
 
 
-// ===============================
-// PEER LEFT
-// ===============================
+function endCall() {
 
-socket.on(
-    "peer-left",
-    ({
-        peerId
-    }) => {
+    for (
+        const peerId in peers
+    ) {
 
-        if (
-            peers[peerId]
-        ) {
+        peers[peerId].close();
 
-            peers[peerId].close();
-
-            delete peers[peerId];
-        }
-
-
-        remoteVideo.srcObject =
-            null;
-
-
-        setStatus(
-            "Other person left the call."
-        );
+        delete peers[peerId];
     }
-);
 
 
-// ===============================
+    if (localStream) {
+
+        localStream
+            .getTracks()
+            .forEach(
+                track =>
+                    track.stop()
+            );
+
+
+        localStream =
+            null;
+    }
+
+
+    localVideo.srcObject =
+        null;
+
+
+    remoteVideo.srcObject =
+        null;
+
+
+    socket.emit(
+        "leave-room"
+    );
+
+
+    callInProgress =
+        false;
+
+
+    cameraBtn.textContent =
+        "Start Camera";
+
+
+    micBtn.textContent =
+        "Mute Mic";
+
+
+    isMuted =
+        false;
+
+
+    incomingCallerId =
+        null;
+
+
+    incomingCallerRoom =
+        null;
+
+
+    hideIncomingCall();
+
+
+    setStatus(
+        "Call ended."
+    );
+
+
+    // Re-register own permanent room
+    setTimeout(
+        () => {
+
+            joinOwnRoom();
+
+        },
+        500
+    );
+}
+
+
+// ============================================
 // QR SCANNER
-// ===============================
+// ============================================
 
 scanBtn.addEventListener(
     "click",
@@ -1552,51 +1508,18 @@ async function startScanner() {
                 );
 
 
-                const targetRoom =
+                code =
                     code
                         .trim()
                         .toUpperCase();
 
 
-                // QR owner ki room ko
-                // apni permanent ID se replace
-                // nahi karna.
-                //
-                // QR scan = call that user.
-
-                if (
-                    targetRoom ===
-                    getPermanentRoomCode()
-                ) {
-
-                    alert(
-                        "Ye aapki khud ki Room ID hai."
-                    );
-
-                    return;
-                }
+                roomInput.value =
+                    code;
 
 
-                await joinOwnRoom();
-
-
-                currentCallTarget =
-                    targetRoom;
-
-
-                socket.emit(
-                    "call-user",
-                    {
-                        room:
-                            targetRoom
-                    }
-                );
-
-
-                setStatus(
-                    "Calling " +
-                    targetRoom +
-                    "..."
+                joinTargetRoom(
+                    code
                 );
             },
 
@@ -1608,6 +1531,7 @@ async function startScanner() {
     ) {
 
         console.error(
+            "QR scanner error:",
             error
         );
 
@@ -1618,15 +1542,402 @@ async function startScanner() {
 
 
         alert(
-            "QR scanner camera open nahi hua."
+            "QR scanner camera open nahi hua:\n" +
+            error.message
         );
     }
 }
 
 
-// ===============================
-// AUTO QR LINK
-// ===============================
+// ============================================
+// PUSH NOTIFICATIONS
+// ============================================
+
+function urlBase64ToUint8Array(
+    base64String
+) {
+
+    const padding =
+        "=".repeat(
+            (4 -
+                (base64String.length %
+                    4)) %
+                4
+        );
+
+
+    const base64 =
+        (
+            base64String +
+            padding
+        )
+            .replace(
+                /\-/g,
+                "+"
+            )
+            .replace(
+                /_/g,
+                "/"
+            );
+
+
+    const rawData =
+        window.atob(
+            base64
+        );
+
+
+    return Uint8Array.from(
+        [...rawData].map(
+            char =>
+                char.charCodeAt(
+                    0
+                )
+        )
+    );
+}
+
+
+// ============================================
+// REGISTER PUSH
+// ============================================
+
+async function registerPush() {
+
+    if (
+        !("serviceWorker" in navigator)
+    ) {
+
+        alert(
+            "Is browser mein Service Worker supported nahi hai."
+        );
+
+        return;
+    }
+
+
+    if (
+        !("PushManager" in window)
+    ) {
+
+        alert(
+            "Is browser mein Push Notification supported nahi hai."
+        );
+
+        return;
+    }
+
+
+    try {
+
+        const registration =
+            await navigator
+                .serviceWorker
+                .register(
+                    "/sw.js"
+                );
+
+
+        console.log(
+            "Service Worker registered."
+        );
+
+
+        const response =
+            await fetch(
+                "/api/vapid-public-key"
+            );
+
+
+        const result =
+            await response.json();
+
+
+        const publicKey =
+            result.publicKey;
+
+
+        if (!publicKey) {
+
+            alert(
+                "VAPID keys server par configured nahi hain."
+            );
+
+            return;
+        }
+
+
+        let permission =
+            Notification.permission;
+
+
+        if (
+            permission !==
+            "granted"
+        ) {
+
+            permission =
+                await Notification.requestPermission();
+        }
+
+
+        if (
+            permission !==
+            "granted"
+        ) {
+
+            alert(
+                "Notifications ko Allow karo."
+            );
+
+            return;
+        }
+
+
+        let subscription =
+            await registration
+                .pushManager
+                .getSubscription();
+
+
+        if (!subscription) {
+
+            subscription =
+                await registration
+                    .pushManager
+                    .subscribe(
+                        {
+                            userVisibleOnly:
+                                true,
+
+                            applicationServerKey:
+                                urlBase64ToUint8Array(
+                                    publicKey
+                                )
+                        }
+                    );
+        }
+
+
+        const saveResponse =
+            await fetch(
+                "/api/subscribe",
+                {
+                    method:
+                        "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify(
+                            {
+                                room:
+                                    getPermanentRoomCode(),
+
+                                subscription:
+                                    subscription
+                            }
+                        )
+                }
+            );
+
+
+        if (
+            !saveResponse.ok
+        ) {
+
+            throw new Error(
+                "Subscription server par save nahi hui."
+            );
+        }
+
+
+        notificationBtn.textContent =
+            "🔔 Notifications Enabled";
+
+
+        setStatus(
+            "Call notifications enabled."
+        );
+
+
+    } catch (
+        error
+    ) {
+
+        console.error(
+            "Push error:",
+            error
+        );
+
+
+        alert(
+            "Notification enable nahi hua:\n" +
+            error.message
+        );
+    }
+}
+
+
+// ============================================
+// NOTIFICATION BUTTON
+// ============================================
+
+notificationBtn.addEventListener(
+    "click",
+    registerPush
+);
+
+
+// ============================================
+// SERVICE WORKER MESSAGE
+// ============================================
+
+if (
+    "serviceWorker" in navigator
+) {
+
+    navigator.serviceWorker.addEventListener(
+        "message",
+        event => {
+
+            const data =
+                event.data;
+
+
+            if (
+                !data ||
+                data.type !==
+                "call-action"
+            ) {
+                return;
+            }
+
+
+            if (
+                data.action ===
+                "accept"
+            ) {
+
+                incomingCallerId =
+                    data.callerId ||
+                    null;
+
+
+                incomingCallerRoom =
+                    data.callerRoom ||
+                    null;
+
+
+                incomingCallerText.textContent =
+                    data.callerRoom
+                        ? `Room ${data.callerRoom} is calling you`
+                        : "Someone is calling you";
+
+
+                incomingCallOverlay.classList.remove(
+                    "hidden"
+                );
+
+
+                setStatus(
+                    "Incoming video call..."
+                );
+
+            }
+
+            else if (
+                data.action ===
+                "reject"
+            ) {
+
+                if (
+                    data.callerId
+                ) {
+
+                    socket.emit(
+                        "reject-call",
+                        {
+                            callerId:
+                                data.callerId
+                        }
+                    );
+                }
+
+            }
+
+            else {
+
+                incomingCallerId =
+                    data.callerId ||
+                    null;
+
+
+                incomingCallerRoom =
+                    data.callerRoom ||
+                    null;
+
+
+                incomingCallerText.textContent =
+                    data.callerRoom
+                        ? `Room ${data.callerRoom} is calling you`
+                        : "Someone is calling you";
+
+
+                incomingCallOverlay.classList.remove(
+                    "hidden"
+                );
+            }
+        }
+    );
+}
+
+
+// ============================================
+// AUTO REGISTER SERVICE WORKER
+// ============================================
+
+if (
+    "serviceWorker" in navigator
+) {
+
+    window.addEventListener(
+        "load",
+        () => {
+
+            navigator.serviceWorker
+                .register(
+                    "/sw.js"
+                )
+                .then(
+                    registration => {
+
+                        console.log(
+                            "Service Worker ready:",
+                            registration.scope
+                        );
+                    }
+                )
+                .catch(
+                    error => {
+
+                        console.error(
+                            "Service Worker error:",
+                            error
+                        );
+                    }
+                );
+        }
+    );
+}
+
+
+// ============================================
+// ROOM FROM QR / URL
+// ============================================
 
 const params =
     new URLSearchParams(
@@ -1635,7 +1946,9 @@ const params =
 
 
 const roomFromUrl =
-    params.get("room");
+    params.get(
+        "room"
+    );
 
 
 if (roomFromUrl) {
@@ -1646,42 +1959,22 @@ if (roomFromUrl) {
             .toUpperCase();
 
 
-    // QR link se aane par
-    // apni permanent Room ID
-    // change nahi hogi.
-
-    if (
-        targetRoom !==
-        getPermanentRoomCode()
-    ) {
-
-        setTimeout(
-            async () => {
-
-                await joinOwnRoom();
+    roomInput.value =
+        targetRoom;
 
 
-                currentCallTarget =
-                    targetRoom;
+    roomInput.readOnly =
+        true;
 
 
-                socket.emit(
-                    "call-user",
-                    {
-                        room:
-                            targetRoom
-                    }
-                );
+    setTimeout(
+        () => {
 
+            joinTargetRoom(
+                targetRoom
+            );
 
-                setStatus(
-                    "Calling " +
-                    targetRoom +
-                    "..."
-                );
-
-            },
-            700
-        );
-    }
+        },
+        800
+    );
 }
