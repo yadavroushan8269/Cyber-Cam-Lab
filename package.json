@@ -1,14 +1,15 @@
 {
   "name": "qr-webrtc-video-call",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Two-phone WebRTC video calling with QR room pairing",
+  "description": "Two-person WebRTC video calling with permanent room IDs and call notifications",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.21.2",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "web-push": "^3.6.7"
   }
 }
