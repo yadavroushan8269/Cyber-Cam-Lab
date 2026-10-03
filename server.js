@@ -7,9 +7,12 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const MAX_USERS_PER_ROOM = 10;
+const MAX_USERS_PER_ROOM = 2;
 
-// Serve website files from repository root
+// ===============================
+// WEBSITE
+// ===============================
+
 app.use(express.static(__dirname));
 
 app.get("*", (req, res) => {
@@ -32,7 +35,7 @@ io.on("connection", (socket) => {
 
 
     // ===============================
-    // JOIN ROOM
+    // JOIN OWN ROOM
     // ===============================
 
     socket.on("join-room", ({ room }) => {
@@ -46,6 +49,15 @@ io.on("connection", (socket) => {
                 .trim()
                 .toUpperCase();
 
+
+        // If already inside another room
+        if (socket.data.room) {
+            socket.leave(
+                socket.data.room
+            );
+        }
+
+
         const roomSet =
             io.sockets.adapter.rooms.get(
                 roomName
@@ -57,7 +69,7 @@ io.on("connection", (socket) => {
                 : 0;
 
 
-        // Maximum 10 users
+        // Maximum 2 people
         if (
             currentUsers >=
             MAX_USERS_PER_ROOM
@@ -71,13 +83,6 @@ io.on("connection", (socket) => {
         }
 
 
-        // Get users already inside
-        const existingUsers =
-            roomSet
-                ? Array.from(roomSet)
-                : [];
-
-
         socket.join(roomName);
 
         socket.data.room =
@@ -85,34 +90,186 @@ io.on("connection", (socket) => {
 
 
         const newCount =
-            existingUsers.length + 1;
+            currentUsers + 1;
 
 
-        // Tell new user about existing users
         socket.emit(
             "room-joined",
             {
                 room: roomName,
-                count: newCount,
-                users: existingUsers
-            }
-        );
-
-
-        // Tell existing users that
-        // a new user has joined
-        socket.to(roomName).emit(
-            "peer-joined",
-            {
-                peerId: socket.id
+                count: newCount
             }
         );
 
 
         console.log(
-            `${socket.id} joined ${roomName} (${newCount}/10)`
+            `${socket.id} joined ${roomName} (${newCount}/2)`
         );
     });
+
+
+    // ===============================
+    // CALL USER BY ROOM ID
+    // ===============================
+
+    socket.on(
+        "call-user",
+        ({ room }) => {
+
+            if (!room) {
+                return;
+            }
+
+            const targetRoom =
+                room
+                    .trim()
+                    .toUpperCase();
+
+
+            const roomSet =
+                io.sockets.adapter.rooms.get(
+                    targetRoom
+                );
+
+
+            if (
+                !roomSet ||
+                roomSet.size === 0
+            ) {
+
+                socket.emit(
+                    "call-unavailable",
+                    {
+                        room:
+                            targetRoom
+                    }
+                );
+
+                return;
+            }
+
+
+            // Find another socket in target room
+            const targetSocketId =
+                Array.from(
+                    roomSet
+                ).find(
+                    id =>
+                        id !==
+                        socket.id
+                );
+
+
+            // If caller accidentally
+            // calls himself
+            if (!targetSocketId) {
+
+                socket.emit(
+                    "call-unavailable",
+                    {
+                        room:
+                            targetRoom
+                    }
+                );
+
+                return;
+            }
+
+
+            // Send incoming call
+            io.to(
+                targetSocketId
+            ).emit(
+                "incoming-call",
+                {
+                    callerId:
+                        socket.id,
+
+                    callerRoom:
+                        socket.data.room || "",
+
+                    targetRoom:
+                        targetRoom
+                }
+            );
+
+
+            // Tell caller ringing
+            socket.emit(
+                "call-ringing",
+                {
+                    target:
+                        targetSocketId,
+
+                    room:
+                        targetRoom
+                }
+            );
+
+
+            console.log(
+                `${socket.id} is calling ${targetSocketId}`
+            );
+        }
+    );
+
+
+    // ===============================
+    // ACCEPT CALL
+    // ===============================
+
+    socket.on(
+        "accept-call",
+        ({ callerId }) => {
+
+            if (!callerId) {
+                return;
+            }
+
+
+            io.to(
+                callerId
+            ).emit(
+                "call-accepted",
+                {
+                    target:
+                        socket.id
+                }
+            );
+
+
+            console.log(
+                `${socket.id} accepted call from ${callerId}`
+            );
+        }
+    );
+
+
+    // ===============================
+    // REJECT CALL
+    // ===============================
+
+    socket.on(
+        "reject-call",
+        ({ callerId }) => {
+
+            if (!callerId) {
+                return;
+            }
+
+
+            io.to(
+                callerId
+            ).emit(
+                "call-rejected"
+            );
+
+
+            console.log(
+                `${socket.id} rejected call from ${callerId}`
+            );
+        }
+    );
 
 
     // ===============================
@@ -123,15 +280,24 @@ io.on("connection", (socket) => {
         "signal",
         ({ target, data }) => {
 
-            if (!target || !data) {
+            if (
+                !target ||
+                !data
+            ) {
                 return;
             }
 
-            io.to(target).emit(
+
+            io.to(
+                target
+            ).emit(
                 "signal",
                 {
-                    sender: socket.id,
-                    data: data
+                    sender:
+                        socket.id,
+
+                    data:
+                        data
                 }
             );
         }
@@ -171,7 +337,7 @@ io.on("connection", (socket) => {
 
 
 // ===============================
-// LEAVE ROOM FUNCTION
+// LEAVE ROOM
 // ===============================
 
 function leaveRoom(socket) {
@@ -183,16 +349,20 @@ function leaveRoom(socket) {
         return;
     }
 
+
     socket.to(room).emit(
         "peer-left",
         {
-            peerId: socket.id
+            peerId:
+                socket.id
         }
     );
 
+
     socket.leave(room);
 
-    socket.data.room = null;
+    socket.data.room =
+        null;
 }
 
 
@@ -202,6 +372,7 @@ function leaveRoom(socket) {
 
 const PORT =
     process.env.PORT || 10000;
+
 
 server.listen(
     PORT,
