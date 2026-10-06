@@ -5,232 +5,824 @@
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1, viewport-fit=cover"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     >
 
-    <meta
-        name="theme-color"
-        content="#111827"
-    >
+    <meta name="theme-color" content="#000000">
 
-    <meta
-        name="mobile-web-app-capable"
-        content="yes"
-    >
+    <title>ROUSHAN // CCTV CALL</title>
 
-    <title>JH-ROUSHAN-YADAV (Admin)</title>
-
-    <link
-        rel="stylesheet"
-        href="/style.css"
-    >
+    <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
 
+<!-- =========================================================
+     MATRIX / HACKER BACKGROUND
+========================================================= -->
+
+<div class="matrix-bg"></div>
+<div class="scan-lines"></div>
+
+
+<!-- =========================================================
+     MAIN APPLICATION
+========================================================= -->
+
 <main class="app">
 
-    <header>
-        <h1>JH-ROUSHAN-YADAV (Admin)</h1>
 
-        <p>
-            Contact:-+91 91535 76962
-        </p>
-    </header>
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
 
+    <header class="topbar">
 
-    <!-- ROOM -->
-    <section class="card">
+        <div class="brand">
 
-        <div class="row">
+            <div class="brand-icon">
+                ◉
+            </div>
 
-            <input
-                id="roomInput"
-                maxlength="40"
-                placeholder="Your Room ID"
-                autocomplete="off"
-            >
+            <div>
 
-            <button
-                id="createBtn"
-                type="button"
-            >
-                Create Room
-            </button>
+                <h1>
+                    ROUSHAN<span>//</span>CALL
+                </h1>
+
+                <p>
+                    &gt; SECURE VIDEO CONNECTION SYSTEM
+                </p>
+
+            </div>
 
         </div>
 
 
-        <!-- QR -->
+        <div class="system-status">
+
+            <span class="status-dot"></span>
+
+            <span id="connectionStatus">
+                ONLINE
+            </span>
+
+        </div>
+
+    </header>
+
+
+
+    <!-- =====================================================
+         CONTROL / ROOM PANEL
+    ====================================================== -->
+
+    <section class="terminal-panel">
+
+        <div class="terminal-title">
+
+            <span>
+                [ ROOM_CONTROL ]
+            </span>
+
+            <span class="terminal-light">
+                ● SYSTEM_READY
+            </span>
+
+        </div>
+
+
+        <div class="control-grid">
+
+
+            <!-- YOUR ROOM -->
+
+            <div class="control-box">
+
+                <label>
+                    &gt; YOUR_PERMANENT_ROOM_ID
+                </label>
+
+                <div class="input-row">
+
+                    <input
+                        id="roomInput"
+                        type="text"
+                        maxlength="40"
+                        placeholder="ROOM_ID"
+                        readonly
+                    >
+
+                    <button
+                        id="createBtn"
+                        type="button"
+                    >
+                        CREATE
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- CALL ROOM -->
+
+            <div class="control-box">
+
+                <label>
+                    &gt; TARGET_ROOM_ID
+                </label>
+
+                <div class="input-row">
+
+                    <input
+                        id="targetRoomInput"
+                        type="text"
+                        maxlength="40"
+                        placeholder="ENTER ROOM ID"
+                    >
+
+                    <button
+                        id="joinBtn"
+                        type="button"
+                    >
+                        CALL
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- ACTIONS -->
+
+            <div class="action-box">
+
+                <button
+                    id="scanBtn"
+                    type="button"
+                    class="cyber-button"
+                >
+                    [ SCAN_QR ]
+                </button>
+
+                <button
+                    id="notificationBtn"
+                    type="button"
+                    class="cyber-button"
+                >
+                    [ NOTIFY ]
+                </button>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             QR CODE
+        ================================================== -->
+
         <div
             id="qrBox"
             class="qr-box hidden"
         >
 
-            <div id="qrcode"></div>
+            <div class="qr-header">
+                &gt;&gt; ROOM_ACCESS_QR
+            </div>
 
-            <small>
-                Scan this QR from the second phone.
-            </small>
+            <div
+                id="qrcode"
+                class="qr-code"
+            ></div>
 
-        </div>
-
-
-        <div class="row">
-
-            <button
-                id="joinBtn"
-                type="button"
-            >
-                Join Room
-            </button>
-
-            <button
-                id="scanBtn"
-                type="button"
-                class="secondary"
-            >
-                Scan QR
-            </button>
+            <p>
+                &gt; SCAN TO CONNECT
+            </p>
 
         </div>
 
 
-        <!-- QR SCANNER -->
+
+        <!-- =================================================
+             QR SCANNER
+        ================================================== -->
+
         <div
             id="scanner"
-            class="hidden"
+            class="scanner hidden"
         ></div>
 
 
-        <!-- NOTIFICATION -->
-        <button
-            id="notificationBtn"
-            type="button"
-            class="secondary notification-button"
-        >
-            🔔 Enable Call Notifications
-        </button>
 
+        <!-- =================================================
+             STATUS
+        ================================================== -->
 
-        <p
-            id="status"
-            class="status"
-        >
-            Not connected.
-        </p>
+        <div class="system-message">
 
-    </section>
+            <span class="prompt">
+                &gt;
+            </span>
 
-
-    <!-- VIDEO -->
-    <section class="videos">
-
-        <div class="video-card">
-
-            <span>You</span>
-
-            <video
-                id="localVideo"
-                autoplay
-                muted
-                playsinline
-            ></video>
-
-        </div>
-
-
-        <div class="video-card">
-
-            <span>Other phone</span>
-
-            <video
-                id="remoteVideo"
-                autoplay
-                playsinline
-            ></video>
+            <span id="status">
+                SYSTEM READY // WAITING FOR CONNECTION
+            </span>
 
         </div>
 
     </section>
 
 
-    <!-- CONTROLS -->
-    <section class="controls">
+
+    <!-- =====================================================
+         CCTV CAMERA WALL
+    ====================================================== -->
+
+    <section class="cctv-section">
+
+
+        <div class="cctv-header">
+
+            <div>
+
+                <span class="cctv-title">
+                    [ LIVE_CCTV_NETWORK ]
+                </span>
+
+                <span class="cctv-subtitle">
+                    // MAX 06 CONNECTIONS
+                </span>
+
+            </div>
+
+
+            <div class="cctv-counter">
+
+                <span id="userCount">
+                    0
+                </span>
+
+                <span>
+                    / 6 ONLINE
+                </span>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             SIX CAMERA GRID
+        ================================================== -->
+
+        <div
+            id="videoGrid"
+            class="video-grid"
+        >
+
+
+            <!-- CAMERA 01 / YOU -->
+
+            <div
+                class="camera-tile local-tile"
+                id="localTile"
+            >
+
+                <div class="camera-header">
+
+                    <span class="camera-name">
+                        CAM_01 // YOU
+                    </span>
+
+                    <span class="camera-live">
+                        ● LIVE
+                    </span>
+
+                </div>
+
+
+                <div class="camera-screen">
+
+                    <video
+                        id="localVideo"
+                        autoplay
+                        muted
+                        playsinline
+                    ></video>
+
+
+                    <div class="camera-placeholder">
+
+                        <div class="placeholder-icon">
+                            ◉
+                        </div>
+
+                        <span>
+                            CAMERA_OFFLINE
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div class="camera-footer">
+
+                    <span>
+                        &gt; LOCAL_STREAM
+                    </span>
+
+                    <span>
+                        SECURE
+                    </span>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- CAMERA 02 -->
+
+            <div
+                class="camera-tile empty-tile"
+                id="cameraTile2"
+            >
+
+                <div class="camera-header">
+
+                    <span class="camera-name">
+                        CAM_02 // USER_02
+                    </span>
+
+                    <span class="camera-live">
+                        ● WAITING
+                    </span>
+
+                </div>
+
+
+                <div class="camera-screen">
+
+                    <video
+                        id="remoteVideo"
+                        autoplay
+                        playsinline
+                    ></video>
+
+
+                    <div class="camera-placeholder">
+
+                        <div class="placeholder-icon">
+                            ◌
+                        </div>
+
+                        <span>
+                            WAITING_FOR_USER
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div class="camera-footer">
+
+                    <span>
+                        &gt; CHANNEL_02
+                    </span>
+
+                    <span>
+                        OFFLINE
+                    </span>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- CAMERA 03 -->
+
+            <div
+                class="camera-tile empty-tile"
+                id="cameraTile3"
+            >
+
+                <div class="camera-header">
+
+                    <span class="camera-name">
+                        CAM_03 // USER_03
+                    </span>
+
+                    <span class="camera-live">
+                        ● WAITING
+                    </span>
+
+                </div>
+
+
+                <div class="camera-screen">
+
+                    <video
+                        id="remoteVideo3"
+                        autoplay
+                        playsinline
+                    ></video>
+
+
+                    <div class="camera-placeholder">
+
+                        <div class="placeholder-icon">
+                            ◌
+                        </div>
+
+                        <span>
+                            WAITING_FOR_USER
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div class="camera-footer">
+
+                    <span>
+                        &gt; CHANNEL_03
+                    </span>
+
+                    <span>
+                        OFFLINE
+                    </span>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- CAMERA 04 -->
+
+            <div
+                class="camera-tile empty-tile"
+                id="cameraTile4"
+            >
+
+                <div class="camera-header">
+
+                    <span class="camera-name">
+                        CAM_04 // USER_04
+                    </span>
+
+                    <span class="camera-live">
+                        ● WAITING
+                    </span>
+
+                </div>
+
+
+                <div class="camera-screen">
+
+                    <video
+                        id="remoteVideo4"
+                        autoplay
+                        playsinline
+                    ></video>
+
+
+                    <div class="camera-placeholder">
+
+                        <div class="placeholder-icon">
+                            ◌
+                        </div>
+
+                        <span>
+                            WAITING_FOR_USER
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div class="camera-footer">
+
+                    <span>
+                        &gt; CHANNEL_04
+                    </span>
+
+                    <span>
+                        OFFLINE
+                    </span>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- CAMERA 05 -->
+
+            <div
+                class="camera-tile empty-tile"
+                id="cameraTile5"
+            >
+
+                <div class="camera-header">
+
+                    <span class="camera-name">
+                        CAM_05 // USER_05
+                    </span>
+
+                    <span class="camera-live">
+                        ● WAITING
+                    </span>
+
+                </div>
+
+
+                <div class="camera-screen">
+
+                    <video
+                        id="remoteVideo5"
+                        autoplay
+                        playsinline
+                    ></video>
+
+
+                    <div class="camera-placeholder">
+
+                        <div class="placeholder-icon">
+                            ◌
+                        </div>
+
+                        <span>
+                            WAITING_FOR_USER
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div class="camera-footer">
+
+                    <span>
+                        &gt; CHANNEL_05
+                    </span>
+
+                    <span>
+                        OFFLINE
+                    </span>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- CAMERA 06 -->
+
+            <div
+                class="camera-tile empty-tile"
+                id="cameraTile6"
+            >
+
+                <div class="camera-header">
+
+                    <span class="camera-name">
+                        CAM_06 // USER_06
+                    </span>
+
+                    <span class="camera-live">
+                        ● WAITING
+                    </span>
+
+                </div>
+
+
+                <div class="camera-screen">
+
+                    <video
+                        id="remoteVideo6"
+                        autoplay
+                        playsinline
+                    ></video>
+
+
+                    <div class="camera-placeholder">
+
+                        <div class="placeholder-icon">
+                            ◌
+                        </div>
+
+                        <span>
+                            WAITING_FOR_USER
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div class="camera-footer">
+
+                    <span>
+                        &gt; CHANNEL_06
+                    </span>
+
+                    <span>
+                        OFFLINE
+                    </span>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         CALL CONTROLS
+    ====================================================== -->
+
+    <section class="call-controls">
+
 
         <button
             id="cameraBtn"
             type="button"
+            class="control-button"
         >
-            Start Camera
+            <span>◉</span>
+            CAMERA
+        </button>
+
+
+        <button
+            id="switchCameraBtn"
+            type="button"
+            class="control-button"
+        >
+            <span>↻</span>
+            SWITCH
         </button>
 
 
         <button
             id="micBtn"
             type="button"
+            class="control-button"
         >
-            Mute Mic
+            <span>♪</span>
+            MUTE
         </button>
 
 
         <button
             id="endBtn"
             type="button"
-            class="danger"
+            class="control-button end-button"
         >
-            End Call
+            <span>×</span>
+            END CALL
         </button>
+
 
     </section>
 
 
-    <p class="note">
 
-        Camera and microphone access require HTTPS.
+    <!-- =====================================================
+         TERMINAL LOG
+    ====================================================== -->
 
-        <br><br>
+    <section class="terminal-log">
 
-        Live video uses WebRTC.
-        The server is used for signaling and call notifications.
+        <div class="log-title">
+            [ SYSTEM_LOG ]
+        </div>
 
-    </p>
+        <div id="logOutput">
+
+            <div>
+                &gt; SYSTEM INITIALIZED
+            </div>
+
+            <div>
+                &gt; VIDEO NETWORK READY
+            </div>
+
+            <div>
+                &gt; MAX CHANNELS: 06
+            </div>
+
+            <div>
+                &gt; WAITING FOR CONNECTION...
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         FOOTER
+    ====================================================== -->
+
+    <footer>
+
+        <span>
+            ROUSHAN//CALL v1.0
+        </span>
+
+        <span>
+            SECURE • FAST • PRIVATE
+        </span>
+
+    </footer>
+
 
 </main>
 
 
-<!-- INCOMING CALL OVERLAY -->
+
+<!-- =========================================================
+     FULL SCREEN INCOMING CALL
+========================================================= -->
 
 <div
     id="incomingCallOverlay"
-    class="call-overlay hidden"
+    class="incoming-overlay hidden"
 >
 
-    <div class="incoming-call-box">
 
-        <div class="call-icon">
-            📹
+    <div class="incoming-box">
+
+
+        <div class="incoming-top">
+
+            <span>
+                [ INCOMING_CONNECTION ]
+            </span>
+
+            <span class="incoming-pulse">
+                ● LIVE
+            </span>
+
+        </div>
+
+
+        <div class="incoming-icon">
+            ☎
         </div>
 
 
         <h2>
-            Incoming Video Call
+            INCOMING CALL
         </h2>
 
 
-        <p id="incomingCallerText">
-            Someone is calling you...
-        </p>
+        <div
+            id="incomingCallerText"
+            class="incoming-caller"
+        >
+            &gt; UNKNOWN_ROOM IS CALLING...
+        </div>
+
+
+        <div class="incoming-warning">
+
+            &gt; CONNECTION REQUEST DETECTED
+
+            <br>
+
+            &gt; ACCEPT TO START VIDEO STREAM
+
+        </div>
 
 
         <div class="incoming-buttons">
+
 
             <button
                 id="rejectCallBtn"
                 type="button"
                 class="reject-button"
             >
-                ❌ Reject
+                [ REJECT ]
             </button>
 
 
@@ -239,9 +831,40 @@
                 type="button"
                 class="accept-button"
             >
-                ✅ Accept
+                [ ACCEPT ]
             </button>
 
+
+        </div>
+
+
+    </div>
+
+</div>
+
+
+
+<!-- =========================================================
+     CALL CONNECTING OVERLAY
+========================================================= -->
+
+<div
+    id="connectingOverlay"
+    class="connecting-overlay hidden"
+>
+
+    <div class="connecting-box">
+
+        <div class="loading-symbol">
+            ◉
+        </div>
+
+        <div>
+            &gt; ESTABLISHING_SECURE_CONNECTION...
+        </div>
+
+        <div id="connectingText">
+            PLEASE WAIT
         </div>
 
     </div>
@@ -249,27 +872,23 @@
 </div>
 
 
-<!-- SOCKET.IO -->
+
+<!-- =========================================================
+     JAVASCRIPT LIBRARIES
+========================================================= -->
 
 <script src="/socket.io/socket.io.js"></script>
 
-
-<!-- QR CODE -->
 
 <script
     src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"
 ></script>
 
 
-<!-- QR SCANNER -->
-
 <script
     src="https://unpkg.com/html5-qrcode"
-    defer
 ></script>
 
-
-<!-- APP -->
 
 <script
     src="/app.js"
