@@ -1,380 +1,487 @@
 "use strict";
 
+/* =========================================================
+   JH SECURE CAM
+   FINAL SERVER.JS
+   Node + Express + Socket.IO + Web Push
+========================================================= */
+
 const express = require("express");
 const http = require("http");
 const path = require("path");
-const crypto = require("crypto");
 const { Server } = require("socket.io");
-const webpush = require("web-push");
 
-const app = express();
-const server = http.createServer(app);
+let webpush = null;
 
-const io = new Server(server, {
-  maxHttpBufferSize: 60 * 1024 * 1024, // 60 MB maximum Socket.IO packet
-  cors: {
-    origin: true,
-    methods: ["GET", "POST"]
-  }
-});
+try {
+    webpush = require("web-push");
+} catch (error) {
+    console.warn(
+        "web-push package not installed. Push notifications disabled."
+    );
+}
+
 
 /* =========================================================
-   CONFIG
+   APP / SERVER
 ========================================================= */
 
-const PORT = process.env.PORT || 10000;
+const app = express();
 
-// Maximum users inside one room
+const server =
+    http.createServer(app);
+
+
+/*
+ * Each Socket.IO message can be reasonably sized.
+ *
+ * The current app sends media as a Data URL, so this needs
+ * to be large enough for the selected media.
+ *
+ * 40 MB allows some overhead for a 25 MB file.
+ */
+const io =
+    new Server(server, {
+        maxHttpBufferSize:
+            40 * 1024 * 1024,
+
+        cors: {
+            origin: true,
+            credentials: true
+        }
+    });
+
+
+/* =========================================================
+   SETTINGS
+========================================================= */
+
 const MAX_USERS_PER_ROOM = 6;
 
-// Media sharing limit
-const MAX_MEDIA_SIZE = 50 * 1024 * 1024; // 50 MB
-
-// Chat message limit
-const MAX_MESSAGE_LENGTH = 5000;
-
-// Room cleanup delay
-const ROOM_EMPTY_DELETE_DELAY = 30 * 1000;
+const MAX_MEDIA_BYTES =
+    25 * 1024 * 1024;
 
 
 /* =========================================================
    MIDDLEWARE
 ========================================================= */
 
-app.use(express.json({
-  limit: "60mb"
-}));
+app.use(
+    express.json({
+        limit: "40mb"
+    })
+);
 
 
 /* =========================================================
-   WEB PUSH
+   WEB PUSH CONFIG
 ========================================================= */
 
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
+const VAPID_PUBLIC_KEY =
+    process.env.VAPID_PUBLIC_KEY;
+
+const VAPID_PRIVATE_KEY =
+    process.env.VAPID_PRIVATE_KEY;
+
 const VAPID_EMAIL =
-  process.env.VAPID_EMAIL || "mailto:yadavroushan8269@gmail.com";
+    process.env.VAPID_EMAIL ||
+    "mailto:yadavroushan8269@gmail.com";
+
 
 let pushEnabled = false;
 
-// Room ID -> push subscriptions
-const pushSubscriptions = new Map();
 
-if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  try {
-    webpush.setVapidDetails(
-      VAPID_EMAIL,
-      VAPID_PUBLIC_KEY,
-      VAPID_PRIVATE_KEY
-    );
+if (
+    webpush &&
+    VAPID_PUBLIC_KEY &&
+    VAPID_PRIVATE_KEY
+) {
 
-    pushEnabled = true;
+    try {
 
-    console.log("Web Push enabled.");
-  } catch (error) {
-    console.error("Web Push setup failed:", error.message);
-  }
+        webpush.setVapidDetails(
+            VAPID_EMAIL,
+            VAPID_PUBLIC_KEY,
+            VAPID_PRIVATE_KEY
+        );
+
+        pushEnabled = true;
+
+        console.log(
+            "Web Push enabled."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Web Push configuration error:",
+            error.message
+        );
+    }
+
 } else {
-  console.warn(
-    "Web Push disabled. VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY missing."
-  );
+
+    console.warn(
+        "Web Push disabled: VAPID keys are missing."
+    );
 }
 
 
-/* =========================================================
-   API - VAPID PUBLIC KEY
-========================================================= */
-
-app.get("/api/vapid-public-key", (req, res) => {
-  if (!pushEnabled) {
-    return res.status(503).json({
-      enabled: false,
-      message: "Web Push is not configured."
-    });
-  }
-
-  res.json({
-    enabled: true,
-    publicKey: VAPID_PUBLIC_KEY
-  });
-});
+/*
+ * socket.id -> push subscription
+ */
+const pushSubscriptions =
+    new Map();
 
 
 /* =========================================================
-   API - SUBSCRIBE PUSH
+   API: VAPID PUBLIC KEY
 ========================================================= */
 
-app.post("/api/subscribe", (req, res) => {
-  try {
-    if (!pushEnabled) {
-      return res.status(503).json({
-        success: false,
-        message: "Push notification disabled."
-      });
+app.get(
+    "/api/vapid-public-key",
+    (req, res) => {
+
+        if (
+            !pushEnabled ||
+            !VAPID_PUBLIC_KEY
+        ) {
+
+            return res.status(503).json({
+                enabled: false,
+                message:
+                    "Web Push is not configured."
+            });
+        }
+
+
+        res.json({
+            enabled: true,
+            publicKey:
+                VAPID_PUBLIC_KEY
+        });
     }
-
-    const {
-      room,
-      subscription
-    } = req.body || {};
-
-    if (!room || !subscription) {
-      return res.status(400).json({
-        success: false,
-        message: "Room and subscription are required."
-      });
-    }
-
-    if (
-      !subscription.endpoint ||
-      !subscription.keys ||
-      !subscription.keys.p256dh ||
-      !subscription.keys.auth
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid push subscription."
-      });
-    }
-
-    pushSubscriptions.set(String(room), subscription);
-
-    res.json({
-      success: true
-    });
-
-  } catch (error) {
-    console.error("Subscribe error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Subscription failed."
-    });
-  }
-});
+);
 
 
 /* =========================================================
-   API - UNSUBSCRIBE PUSH
+   API: SUBSCRIBE
 ========================================================= */
 
-app.post("/api/unsubscribe", (req, res) => {
-  try {
-    const { room } = req.body || {};
+app.post(
+    "/api/subscribe",
+    (req, res) => {
 
-    if (room) {
-      pushSubscriptions.delete(String(room));
+        if (!pushEnabled) {
+
+            return res.status(503).json({
+                ok: false,
+                message:
+                    "Web Push is disabled."
+            });
+        }
+
+
+        const subscription =
+            req.body?.subscription;
+
+
+        if (
+            !subscription ||
+            !subscription.endpoint
+        ) {
+
+            return res.status(400).json({
+                ok: false,
+                message:
+                    "Invalid push subscription."
+            });
+        }
+
+
+        /*
+         * We identify the subscription using
+         * its endpoint.
+         *
+         * This is intentionally kept in memory.
+         */
+
+        const key =
+            subscription.endpoint;
+
+
+        pushSubscriptions.set(
+            key,
+            subscription
+        );
+
+
+        res.json({
+            ok: true
+        });
     }
-
-    res.json({
-      success: true
-    });
-
-  } catch (error) {
-    console.error("Unsubscribe error:", error);
-
-    res.status(500).json({
-      success: false
-    });
-  }
-});
+);
 
 
 /* =========================================================
-   PUSH NOTIFICATION HELPER
+   API: UNSUBSCRIBE
 ========================================================= */
 
-async function sendPushNotification(room, payload) {
-  if (!pushEnabled) return;
+app.post(
+    "/api/unsubscribe",
+    (req, res) => {
 
-  const subscription = pushSubscriptions.get(String(room));
+        const endpoint =
+            req.body?.endpoint;
 
-  if (!subscription) return;
 
-  try {
-    await webpush.sendNotification(
-      subscription,
-      JSON.stringify(payload)
-    );
-  } catch (error) {
-    console.error(
-      "Push notification failed:",
-      error.statusCode || "",
-      error.message
-    );
+        if (endpoint) {
 
-    // Subscription expired / invalid
-    if (
-      error.statusCode === 404 ||
-      error.statusCode === 410
-    ) {
-      pushSubscriptions.delete(String(room));
+            pushSubscriptions.delete(
+                endpoint
+            );
+        }
+
+
+        res.json({
+            ok: true
+        });
     }
-  }
-}
+);
 
 
 /* =========================================================
-   STATIC FILES
-========================================================= */
-
-app.use(express.static(__dirname));
-
-
-/* =========================================================
-   FALLBACK
-========================================================= */
-
-app.get("*", (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "index.html")
-  );
-});
-
-
-/* =========================================================
-   ROOM DATA
+   STATIC WEBSITE
 ========================================================= */
 
 /*
-  rooms:
-  roomId -> Map(socketId, userInfo)
-*/
+ * API routes MUST be above this.
+ */
 
-const rooms = new Map();
+app.use(
+    express.static(
+        __dirname
+    )
+);
 
-// socketId -> current room
-const socketRooms = new Map();
 
-// socketId -> permanent room ID
-const socketPermanentRooms = new Map();
+/* =========================================================
+   SPA FALLBACK
+========================================================= */
 
-// socketId -> user information
-const socketUsers = new Map();
+app.get(
+    "*",
+    (req, res) => {
 
-// delayed room cleanup timers
-const roomCleanupTimers = new Map();
+        res.sendFile(
+            path.join(
+                __dirname,
+                "index.html"
+            )
+        );
+    }
+);
 
 
 /* =========================================================
    ROOM HELPERS
 ========================================================= */
 
-function getRoom(roomId) {
-  if (!rooms.has(roomId)) {
-    rooms.set(roomId, new Map());
-  }
+function normalizeRoom(
+    room
+) {
 
-  return rooms.get(roomId);
-}
-
-
-function cancelRoomCleanup(roomId) {
-  const timer = roomCleanupTimers.get(roomId);
-
-  if (timer) {
-    clearTimeout(timer);
-    roomCleanupTimers.delete(roomId);
-  }
-}
-
-
-function scheduleRoomCleanup(roomId) {
-  if (!roomId) return;
-
-  cancelRoomCleanup(roomId);
-
-  const timer = setTimeout(() => {
-    const room = rooms.get(roomId);
-
-    if (!room || room.size === 0) {
-      rooms.delete(roomId);
+    if (
+        typeof room !==
+        "string"
+    ) {
+        return "";
     }
 
-    roomCleanupTimers.delete(roomId);
-  }, ROOM_EMPTY_DELETE_DELAY);
-
-  roomCleanupTimers.set(roomId, timer);
+    return room
+        .trim()
+        .toUpperCase()
+        .slice(0, 50);
 }
 
 
-function getRoomUsers(roomId, excludeSocketId = null) {
-  const room = rooms.get(roomId);
+function getRoomUsers(
+    room
+) {
 
-  if (!room) return [];
+    if (!room) {
+        return [];
+    }
 
-  const users = [];
 
-  for (const [socketId, info] of room.entries()) {
-    if (socketId === excludeSocketId) continue;
+    const roomSet =
+        io.sockets.adapter.rooms.get(
+            room
+        );
 
-    users.push({
-      socketId,
-      room: info.room,
-      permanentRoom: info.permanentRoom || info.room,
-      name: info.name || "User"
-    });
-  }
 
-  return users;
+    if (!roomSet) {
+        return [];
+    }
+
+
+    return Array.from(
+        roomSet
+    );
 }
 
 
-function broadcastRoomUsers(roomId) {
-  const room = rooms.get(roomId);
+function getRoomCount(
+    room
+) {
 
-  if (!room) return;
-
-  const users = getRoomUsers(roomId);
-
-  for (const socketId of room.keys()) {
-    io.to(socketId).emit("room-users", {
-      room: roomId,
-      users: users.filter(
-        user => user.socketId !== socketId
-      )
-    });
-  }
+    return getRoomUsers(
+        room
+    ).length;
 }
 
 
 /* =========================================================
-   REMOVE USER FROM ROOM
+   LEAVE ROOM
 ========================================================= */
 
-function leaveCurrentRoom(socket, reason = "leave") {
-  const oldRoomId = socketRooms.get(socket.id);
+function leaveRoom(
+    socket
+) {
 
-  if (!oldRoomId) {
-    return;
-  }
+    const room =
+        socket.data.room;
 
-  const room = rooms.get(oldRoomId);
 
-  if (room) {
-    room.delete(socket.id);
-
-    socket.to(oldRoomId).emit("peer-left", {
-      peerId: socket.id,
-      socketId: socket.id,
-      reason
-    });
-
-    socket.to(oldRoomId).emit("user-left", {
-      socketId: socket.id,
-      peerId: socket.id,
-      reason
-    });
-
-    if (room.size === 0) {
-      scheduleRoomCleanup(oldRoomId);
-    } else {
-      broadcastRoomUsers(oldRoomId);
+    if (!room) {
+        return;
     }
-  }
 
-  socket.leave(oldRoomId);
-  socketRooms.delete(socket.id);
+
+    socket.to(room).emit(
+        "peer-left",
+        {
+            peerId:
+                socket.id
+        }
+    );
+
+
+    socket.leave(
+        room
+    );
+
+
+    socket.data.room =
+        null;
+
+
+    socket.data.roomName =
+        null;
+
+
+    /*
+     * Update room count.
+     */
+
+    const remaining =
+        getRoomCount(
+            room
+        );
+
+
+    if (remaining > 0) {
+
+        io.to(room).emit(
+            "room-count",
+            {
+                count:
+                    remaining
+            }
+        );
+    }
+}
+
+
+/* =========================================================
+   PUSH NOTIFICATION
+========================================================= */
+
+async function sendPushNotification(
+    room,
+    payload
+) {
+
+    if (
+        !pushEnabled ||
+        !webpush
+    ) {
+        return;
+    }
+
+
+    /*
+     * Current implementation keeps push
+     * subscriptions in memory.
+     *
+     * We don't know which subscription belongs
+     * to a particular room permanently, so this
+     * broadcasts the incoming-call notification
+     * to stored subscriptions.
+     */
+
+    const data =
+        JSON.stringify(
+            payload
+        );
+
+
+    const entries =
+        Array.from(
+            pushSubscriptions.entries()
+        );
+
+
+    for (
+        const [
+            key,
+            subscription
+        ] of entries
+    ) {
+
+        try {
+
+            await webpush.sendNotification(
+                subscription,
+                data
+            );
+
+        } catch (error) {
+
+            console.warn(
+                "Push notification failed:",
+                error.statusCode ||
+                error.message
+            );
+
+
+            /*
+             * Remove expired subscriptions.
+             */
+
+            if (
+                error.statusCode ===
+                    404 ||
+                error.statusCode ===
+                    410
+            ) {
+
+                pushSubscriptions.delete(
+                    key
+                );
+            }
+        }
+    }
 }
 
 
@@ -382,1036 +489,1020 @@ function leaveCurrentRoom(socket, reason = "leave") {
    SOCKET CONNECTION
 ========================================================= */
 
-io.on("connection", (socket) => {
+io.on(
+    "connection",
+    socket => {
 
-  console.log(
-    "Socket connected:",
-    socket.id
-  );
-
-
-  /* =======================================================
-     REGISTER USER
-  ======================================================= */
-
-  socket.on("register-user", (data = {}) => {
-
-    const permanentRoom =
-      typeof data.room === "string"
-        ? data.room.trim().toUpperCase()
-        : "";
-
-    const name =
-      typeof data.name === "string"
-        ? data.name.trim().slice(0, 40)
-        : "User";
-
-    socketPermanentRooms.set(
-      socket.id,
-      permanentRoom
-    );
-
-    socketUsers.set(socket.id, {
-      name,
-      permanentRoom
-    });
-
-    socket.emit("user-registered", {
-      socketId: socket.id,
-      room: permanentRoom
-    });
-  });
+        console.log(
+            "User connected:",
+            socket.id
+        );
 
 
-  /* =======================================================
-     JOIN ROOM
-  ======================================================= */
+        /* =================================================
+           JOIN ROOM
+        ================================================= */
 
-  socket.on("join-room", (data = {}) => {
+        socket.on(
+            "join-room",
+            payload => {
 
-    const roomId =
-      typeof data.room === "string"
-        ? data.room.trim().toUpperCase()
-        : "";
+                const room =
+                    normalizeRoom(
+                        payload?.room
+                    );
 
-    if (!roomId) {
-      socket.emit("room-error", {
-        message: "Room ID is required."
-      });
 
-      return;
+                if (!room) {
+
+                    socket.emit(
+                        "room-full",
+                        {
+                            message:
+                                "Invalid Room ID."
+                        }
+                    );
+
+                    return;
+                }
+
+
+                /*
+                 * If already inside another room,
+                 * leave it first.
+                 */
+
+                if (
+                    socket.data.room &&
+                    socket.data.room !== room
+                ) {
+
+                    leaveRoom(
+                        socket
+                    );
+                }
+
+
+                /*
+                 * Already in this room.
+                 */
+
+                if (
+                    socket.data.room ===
+                    room
+                ) {
+
+                    const users =
+                        getRoomUsers(
+                            room
+                        ).filter(
+                            id =>
+                                id !==
+                                socket.id
+                        );
+
+
+                    socket.emit(
+                        "room-joined",
+                        {
+                            room:
+                                room,
+
+                            count:
+                                getRoomCount(
+                                    room
+                                ),
+
+                            users:
+                                users
+                        }
+                    );
+
+                    return;
+                }
+
+
+                /*
+                 * Current members BEFORE joining.
+                 */
+
+                const existingUsers =
+                    getRoomUsers(
+                        room
+                    );
+
+
+                if (
+                    existingUsers.length >=
+                    MAX_USERS_PER_ROOM
+                ) {
+
+                    socket.emit(
+                        "room-full",
+                        {
+                            message:
+                                "Room is full. Maximum 6 users allowed."
+                        }
+                    );
+
+                    return;
+                }
+
+
+                /*
+                 * Join.
+                 */
+
+                socket.join(
+                    room
+                );
+
+
+                socket.data.room =
+                    room;
+
+                socket.data.roomName =
+                    room;
+
+
+                const count =
+                    getRoomCount(
+                        room
+                    );
+
+
+                /*
+                 * Tell joining user.
+                 */
+
+                socket.emit(
+                    "room-joined",
+                    {
+                        room:
+                            room,
+
+                        count:
+                            count,
+
+                        users:
+                            existingUsers
+                    }
+                );
+
+
+                /*
+                 * Tell existing users.
+                 */
+
+                socket.to(room).emit(
+                    "peer-joined",
+                    {
+                        peerId:
+                            socket.id,
+
+                        count:
+                            count
+                    }
+                );
+
+
+                /*
+                 * Update everybody.
+                 */
+
+                io.to(room).emit(
+                    "room-count",
+                    {
+                        count:
+                            count
+                    }
+                );
+
+
+                console.log(
+                    `${socket.id} joined ${room} (${count}/${MAX_USERS_PER_ROOM})`
+                );
+            }
+        );
+
+
+        /* =================================================
+           ROOM COUNT
+        ================================================= */
+
+        socket.on(
+            "get-room-count",
+            () => {
+
+                const room =
+                    socket.data.room;
+
+
+                if (!room) {
+                    return;
+                }
+
+
+                socket.emit(
+                    "room-count",
+                    {
+                        count:
+                            getRoomCount(
+                                room
+                            )
+                    }
+                );
+            }
+        );
+
+
+        /* =================================================
+           WEBRTC SIGNAL
+        ================================================= */
+
+        socket.on(
+            "signal",
+            payload => {
+
+                const target =
+                    payload?.target;
+
+                const data =
+                    payload?.data;
+
+
+                if (
+                    !target ||
+                    !data
+                ) {
+                    return;
+                }
+
+
+                /*
+                 * Only forward if target exists.
+                 */
+
+                const targetSocket =
+                    io.sockets.sockets.get(
+                        target
+                    );
+
+
+                if (!targetSocket) {
+
+                    return;
+                }
+
+
+                io.to(target).emit(
+                    "signal",
+                    {
+                        sender:
+                            socket.id,
+
+                        data:
+                            data
+                    }
+                );
+            }
+        );
+
+
+        /* =================================================
+           CALL USER
+        ================================================= */
+
+        socket.on(
+            "call-user",
+            payload => {
+
+                const targetRoom =
+                    normalizeRoom(
+                        payload?.targetRoom
+                    );
+
+                const callerRoom =
+                    normalizeRoom(
+                        payload?.callerRoom
+                    );
+
+                const callerName =
+                    typeof payload?.callerName ===
+                    "string"
+                        ? payload.callerName
+                            .trim()
+                            .slice(0, 40)
+                        : "USER";
+
+
+                if (!targetRoom) {
+
+                    socket.emit(
+                        "call-unavailable",
+                        {
+                            message:
+                                "Invalid Room ID."
+                        }
+                    );
+
+                    return;
+                }
+
+
+                const users =
+                    getRoomUsers(
+                        targetRoom
+                    );
+
+
+                /*
+                 * Target room doesn't currently
+                 * have a connected user.
+                 */
+
+                if (!users.length) {
+
+                    socket.emit(
+                        "call-unavailable",
+                        {
+                            message:
+                                "No user is currently online in this room."
+                        }
+                    );
+
+
+                    /*
+                     * Optional push notification.
+                     */
+
+                    sendPushNotification(
+                        targetRoom,
+                        {
+                            type:
+                                "incoming-call",
+
+                            room:
+                                callerRoom,
+
+                            callerRoom:
+                                callerRoom,
+
+                            callerName:
+                                callerName,
+
+                            message:
+                                `${callerName} is calling you.`
+                        }
+                    ).catch(
+                        console.error
+                    );
+
+
+                    return;
+                }
+
+
+                /*
+                 * Don't call the caller's own socket.
+                 */
+
+                let sent =
+                    false;
+
+
+                users.forEach(
+                    userId => {
+
+                        if (
+                            userId ===
+                            socket.id
+                        ) {
+                            return;
+                        }
+
+
+                        sent =
+                            true;
+
+
+                        io.to(
+                            userId
+                        ).emit(
+                            "incoming-call",
+                            {
+                                callerId:
+                                    socket.id,
+
+                                callerRoom:
+                                    callerRoom,
+
+                                room:
+                                    callerRoom,
+
+                                callerName:
+                                    callerName
+                            }
+                        );
+                    }
+                );
+
+
+                if (!sent) {
+
+                    socket.emit(
+                        "call-unavailable",
+                        {
+                            message:
+                                "No other user is available in this room."
+                        }
+                    );
+
+                    return;
+                }
+
+
+                socket.emit(
+                    "call-ringing",
+                    {
+                        room:
+                            targetRoom
+                    }
+                );
+
+
+                console.log(
+                    `${socket.id} is calling room ${targetRoom}`
+                );
+            }
+        );
+
+
+        /* =================================================
+           ACCEPT CALL
+        ================================================= */
+
+        socket.on(
+            "accept-call",
+            payload => {
+
+                const callerId =
+                    payload?.callerId;
+
+
+                if (!callerId) {
+                    return;
+                }
+
+
+                const callerSocket =
+                    io.sockets.sockets.get(
+                        callerId
+                    );
+
+
+                if (!callerSocket) {
+
+                    socket.emit(
+                        "call-unavailable",
+                        {
+                            message:
+                                "Caller is no longer online."
+                        }
+                    );
+
+                    return;
+                }
+
+
+                callerSocket.emit(
+                    "call-accepted",
+                    {
+                        receiverId:
+                            socket.id,
+
+                        targetId:
+                            socket.id,
+
+                        receiverRoom:
+                            socket.data.room
+                    }
+                );
+
+
+                console.log(
+                    `${socket.id} accepted call from ${callerId}`
+                );
+            }
+        );
+
+
+        /* =================================================
+           REJECT CALL
+        ================================================= */
+
+        socket.on(
+            "reject-call",
+            payload => {
+
+                const callerId =
+                    payload?.callerId;
+
+
+                if (!callerId) {
+                    return;
+                }
+
+
+                const callerSocket =
+                    io.sockets.sockets.get(
+                        callerId
+                    );
+
+
+                if (!callerSocket) {
+                    return;
+                }
+
+
+                callerSocket.emit(
+                    "call-rejected",
+                    {
+                        receiverId:
+                            socket.id
+                    }
+                );
+
+
+                console.log(
+                    `${socket.id} rejected call from ${callerId}`
+                );
+            }
+        );
+
+
+        /* =================================================
+           CHAT TEXT
+        ================================================= */
+
+        socket.on(
+            "chat-message",
+            payload => {
+
+                const room =
+                    normalizeRoom(
+                        payload?.room
+                    );
+
+                const message =
+                    payload?.message;
+
+
+                if (
+                    !room ||
+                    !message
+                ) {
+                    return;
+                }
+
+
+                /*
+                 * Security:
+                 * Don't trust client room blindly.
+                 */
+
+                if (
+                    socket.data.room !==
+                    room
+                ) {
+                    return;
+                }
+
+
+                const cleanMessage = {
+
+                    id:
+                        String(
+                            message.id ||
+                            Date.now()
+                        ).slice(
+                            0,
+                            100
+                        ),
+
+                    type:
+                        "text",
+
+                    senderId:
+                        socket.id,
+
+                    senderName:
+                        typeof message.senderName ===
+                        "string"
+                            ? message.senderName
+                                .slice(0, 40)
+                            : "USER",
+
+                    text:
+                        typeof message.text ===
+                        "string"
+                            ? message.text
+                                .slice(0, 5000)
+                            : "",
+
+                    time:
+                        Date.now(),
+
+                    replyTo:
+                        message.replyTo ||
+                        null
+                };
+
+
+                if (
+                    !cleanMessage.text
+                ) {
+                    return;
+                }
+
+
+                socket.to(
+                    room
+                ).emit(
+                    "chat-message",
+                    {
+                        message:
+                            cleanMessage
+                    }
+                );
+            }
+        );
+
+
+        /* =================================================
+           CHAT MEDIA
+        ================================================= */
+
+        socket.on(
+            "chat-media",
+            payload => {
+
+                const room =
+                    normalizeRoom(
+                        payload?.room
+                    );
+
+                const message =
+                    payload?.message;
+
+
+                if (
+                    !room ||
+                    !message
+                ) {
+                    return;
+                }
+
+
+                /*
+                 * Only allow media from
+                 * a socket actually inside
+                 * the room.
+                 */
+
+                if (
+                    socket.data.room !==
+                    room
+                ) {
+                    return;
+                }
+
+
+                /*
+                 * Basic media validation.
+                 */
+
+                const mime =
+                    typeof message.mime ===
+                    "string"
+                        ? message.mime
+                        : "";
+
+
+                const allowed =
+                    mime.startsWith(
+                        "image/"
+                    ) ||
+                    mime.startsWith(
+                        "video/"
+                    );
+
+
+                if (!allowed) {
+
+                    socket.emit(
+                        "chat-media-error",
+                        {
+                            message:
+                                "Only image and video files are allowed."
+                        }
+                    );
+
+                    return;
+                }
+
+
+                const size =
+                    Number(
+                        message.size
+                    );
+
+
+                if (
+                    !Number.isFinite(
+                        size
+                    ) ||
+                    size <= 0 ||
+                    size >
+                        MAX_MEDIA_BYTES
+                ) {
+
+                    socket.emit(
+                        "chat-media-error",
+                        {
+                            message:
+                                "Media must be between 1 byte and 25 MB."
+                        }
+                    );
+
+                    return;
+                }
+
+
+                const dataUrl =
+                    typeof message.dataUrl ===
+                    "string"
+                        ? message.dataUrl
+                        : "";
+
+
+                /*
+                 * Prevent unexpectedly huge
+                 * payloads from being relayed.
+                 */
+
+                if (
+                    !dataUrl ||
+                    dataUrl.length >
+                        40 * 1024 * 1024
+                ) {
+
+                    socket.emit(
+                        "chat-media-error",
+                        {
+                            message:
+                                "Media payload is too large."
+                        }
+                    );
+
+                    return;
+                }
+
+
+                const cleanMessage = {
+
+                    id:
+                        String(
+                            message.id ||
+                            Date.now()
+                        ).slice(
+                            0,
+                            100
+                        ),
+
+                    type:
+                        mime.startsWith(
+                            "video/"
+                        )
+                            ? "video"
+                            : "image",
+
+                    senderId:
+                        socket.id,
+
+                    senderName:
+                        typeof message.senderName ===
+                        "string"
+                            ? message.senderName
+                                .slice(0, 40)
+                            : "USER",
+
+                    name:
+                        typeof message.name ===
+                        "string"
+                            ? message.name
+                                .slice(0, 200)
+                            : "media",
+
+                    mime:
+                        mime,
+
+                    size:
+                        size,
+
+                    dataUrl:
+                        dataUrl,
+
+                    time:
+                        Date.now(),
+
+                    replyTo:
+                        message.replyTo ||
+                        null
+                };
+
+
+                socket.to(
+                    room
+                ).emit(
+                    "chat-media",
+                    {
+                        message:
+                            cleanMessage
+                    }
+                );
+
+
+                console.log(
+                    `Media relayed: ${cleanMessage.name} (${size} bytes) in ${room}`
+                );
+            }
+        );
+
+
+        /* =================================================
+           CHAT TYPING
+        ================================================= */
+
+        socket.on(
+            "chat-typing",
+            payload => {
+
+                const room =
+                    normalizeRoom(
+                        payload?.room
+                    );
+
+
+                if (
+                    !room ||
+                    socket.data.room !==
+                    room
+                ) {
+                    return;
+                }
+
+
+                socket.to(
+                    room
+                ).emit(
+                    "chat-typing",
+                    {
+                        senderId:
+                            socket.id,
+
+                        name:
+                            typeof payload?.name ===
+                            "string"
+                                ? payload.name
+                                    .slice(0, 40)
+                                : "USER"
+                    }
+                );
+            }
+        );
+
+
+        /* =================================================
+           CHAT STOP TYPING
+        ================================================= */
+
+        socket.on(
+            "chat-stop-typing",
+            payload => {
+
+                const room =
+                    normalizeRoom(
+                        payload?.room
+                    );
+
+
+                if (
+                    !room ||
+                    socket.data.room !==
+                    room
+                ) {
+                    return;
+                }
+
+
+                socket.to(
+                    room
+                ).emit(
+                    "chat-stop-typing",
+                    {
+                        senderId:
+                            socket.id
+                    }
+                );
+            }
+        );
+
+
+        /* =================================================
+           LEAVE ROOM
+        ================================================= */
+
+        socket.on(
+            "leave-room",
+            () => {
+
+                leaveRoom(
+                    socket
+                );
+
+                console.log(
+                    "User left room:",
+                    socket.id
+                );
+            }
+        );
+
+
+        /* =================================================
+           DISCONNECT
+        ================================================= */
+
+        socket.on(
+            "disconnect",
+            reason => {
+
+                console.log(
+                    "User disconnected:",
+                    socket.id,
+                    reason
+                );
+
+
+                leaveRoom(
+                    socket
+                );
+            }
+        );
     }
-
-    const existingRoom = rooms.get(roomId);
-
-    /*
-      If already inside same room, don't duplicate.
-    */
-    if (
-      socketRooms.get(socket.id) === roomId &&
-      existingRoom &&
-      existingRoom.has(socket.id)
-    ) {
-      socket.emit("room-joined", {
-        room: roomId,
-        users: getRoomUsers(roomId, socket.id)
-      });
-
-      return;
-    }
-
-
-    /*
-      Leave previous room before joining another.
-    */
-    if (socketRooms.has(socket.id)) {
-      leaveCurrentRoom(
-        socket,
-        "switch-room"
-      );
-    }
-
-
-    const room = getRoom(roomId);
-
-    cancelRoomCleanup(roomId);
-
-
-    /*
-      Maximum 6 users
-    */
-    if (room.size >= MAX_USERS_PER_ROOM) {
-
-      socket.emit("room-full", {
-        room: roomId,
-        maxUsers: MAX_USERS_PER_ROOM,
-        message:
-          `Room is full. Maximum ${MAX_USERS_PER_ROOM} users allowed.`
-      });
-
-      return;
-    }
-
-
-    const previousUsers =
-      getRoomUsers(roomId);
-
-
-    const userData =
-      socketUsers.get(socket.id) || {};
-
-
-    room.set(socket.id, {
-      room: roomId,
-      permanentRoom:
-        userData.permanentRoom ||
-        socketPermanentRooms.get(socket.id) ||
-        roomId,
-      name:
-        userData.name ||
-        "User",
-      joinedAt: Date.now()
-    });
-
-
-    socket.join(roomId);
-
-    socketRooms.set(
-      socket.id,
-      roomId
-    );
-
-
-    /*
-      Send room information to joining user
-    */
-    socket.emit("room-joined", {
-      room: roomId,
-      users: previousUsers,
-      maxUsers: MAX_USERS_PER_ROOM,
-      count: room.size
-    });
-
-
-    /*
-      Tell existing users
-      that a new peer joined.
-    */
-    socket.to(roomId).emit(
-      "peer-joined",
-      {
-        peerId: socket.id,
-        socketId: socket.id,
-        room: roomId,
-        name:
-          userData.name || "User"
-      }
-    );
-
-
-    socket.to(roomId).emit(
-      "user-joined",
-      {
-        socketId: socket.id,
-        peerId: socket.id,
-        room: roomId,
-        name:
-          userData.name || "User"
-      }
-    );
-
-
-    broadcastRoomUsers(roomId);
-
-    console.log(
-      `Room ${roomId}: ${room.size}/${MAX_USERS_PER_ROOM}`
-    );
-  });
-
-
-  /* =======================================================
-     LEAVE ROOM
-  ======================================================= */
-
-  socket.on("leave-room", () => {
-    leaveCurrentRoom(
-      socket,
-      "leave-room"
-    );
-  });
-
-
-  /* =======================================================
-     CALL USER
-  ======================================================= */
-
-  socket.on("call-user", async (data = {}) => {
-
-    const targetRoom =
-      typeof data.room === "string"
-        ? data.room.trim().toUpperCase()
-        : "";
-
-    if (!targetRoom) {
-      socket.emit("call-unavailable", {
-        room: targetRoom,
-        message: "Room ID is missing."
-      });
-
-      return;
-    }
-
-
-    const callerRoom =
-      socketRooms.get(socket.id) ||
-      socketPermanentRooms.get(socket.id) ||
-      "";
-
-
-    const callerInfo =
-      socketUsers.get(socket.id) || {};
-
-
-    const targetRoomData =
-      rooms.get(targetRoom);
-
-
-    /*
-      Target room doesn't have an online user.
-    */
-    if (
-      !targetRoomData ||
-      targetRoomData.size === 0
-    ) {
-
-      socket.emit("call-unavailable", {
-        room: targetRoom,
-        message:
-          "This room is currently unavailable."
-      });
-
-
-      await sendPushNotification(
-        targetRoom,
-        {
-          type: "incoming-call",
-          title: "Incoming Video Call",
-          body:
-            `${callerInfo.name || "Someone"} is calling you.`,
-          room: callerRoom
-        }
-      );
-
-      return;
-    }
-
-
-    let sent = false;
-
-
-    for (const targetSocketId of targetRoomData.keys()) {
-
-      if (targetSocketId === socket.id) {
-        continue;
-      }
-
-      sent = true;
-
-      io.to(targetSocketId).emit(
-        "incoming-call",
-        {
-          callerId: socket.id,
-          callerSocketId: socket.id,
-          callerRoom,
-          targetRoom,
-          callerName:
-            callerInfo.name || "User"
-        }
-      );
-    }
-
-
-    if (sent) {
-
-      socket.emit("call-ringing", {
-        room: targetRoom,
-        callerId: socket.id
-      });
-
-    } else {
-
-      socket.emit("call-unavailable", {
-        room: targetRoom,
-        message:
-          "No other user is available in this room."
-      });
-    }
-  });
-
-
-  /* =======================================================
-     ACCEPT CALL
-  ======================================================= */
-
-  socket.on("accept-call", (data = {}) => {
-
-    const callerId =
-      data.callerId ||
-      data.callerSocketId;
-
-    if (!callerId) return;
-
-    const callerSocket =
-      io.sockets.sockets.get(callerId);
-
-    if (!callerSocket) {
-
-      socket.emit("call-unavailable", {
-        message:
-          "Caller is no longer available."
-      });
-
-      return;
-    }
-
-
-    io.to(callerId).emit(
-      "call-accepted",
-      {
-        target: socket.id,
-        targetSocketId: socket.id,
-        room:
-          socketRooms.get(socket.id) || ""
-      }
-    );
-
-
-    socket.emit(
-      "call-accepted",
-      {
-        callerId,
-        callerSocketId: callerId,
-        room:
-          socketRooms.get(socket.id) || ""
-      }
-    );
-  });
-
-
-  /* =======================================================
-     REJECT CALL
-  ======================================================= */
-
-  socket.on("reject-call", (data = {}) => {
-
-    const callerId =
-      data.callerId ||
-      data.callerSocketId;
-
-    if (!callerId) return;
-
-    io.to(callerId).emit(
-      "call-rejected",
-      {
-        callerId: socket.id,
-        targetSocketId: socket.id,
-        room:
-          socketRooms.get(socket.id) || "",
-        message: "Call rejected."
-      }
-    );
-  });
-
-
-  /* =======================================================
-     WEBRTC SIGNALING
-  ======================================================= */
-
-  socket.on("signal", (data = {}) => {
-
-    const target =
-      data.target ||
-      data.targetSocketId;
-
-    if (!target) return;
-
-    const targetSocket =
-      io.sockets.sockets.get(target);
-
-    if (!targetSocket) {
-      return;
-    }
-
-    targetSocket.emit(
-      "signal",
-      {
-        sender: socket.id,
-        senderSocketId: socket.id,
-        data: data.data
-      }
-    );
-  });
-
-
-  /* =======================================================
-     CHAT MESSAGE
-  ======================================================= */
-
-  socket.on("chat-message", (data = {}) => {
-
-    const roomId =
-      socketRooms.get(socket.id);
-
-    if (!roomId) return;
-
-
-    let message =
-      typeof data.message === "string"
-        ? data.message
-        : "";
-
-
-    message =
-      message.trim()
-        .slice(0, MAX_MESSAGE_LENGTH);
-
-
-    if (!message) return;
-
-
-    const userInfo =
-      socketUsers.get(socket.id) || {};
-
-
-    const chatMessage = {
-      id: crypto.randomUUID(),
-      type: "text",
-      message,
-      senderId: socket.id,
-      senderName:
-        userInfo.name || "User",
-      room: roomId,
-      timestamp: Date.now()
-    };
-
-
-    /*
-      Send message to everyone
-      in the same room.
-    */
-    io.to(roomId).emit(
-      "chat-message",
-      chatMessage
-    );
-  });
-
-
-  /* =======================================================
-     CHAT MESSAGE ALIAS
-  ======================================================= */
-
-  socket.on("send-message", (data = {}) => {
-
-    const roomId =
-      socketRooms.get(socket.id);
-
-    if (!roomId) return;
-
-
-    let message =
-      typeof data.message === "string"
-        ? data.message.trim()
-        : "";
-
-
-    if (!message) return;
-
-
-    message =
-      message.slice(
-        0,
-        MAX_MESSAGE_LENGTH
-      );
-
-
-    const userInfo =
-      socketUsers.get(socket.id) || {};
-
-
-    const chatMessage = {
-      id: crypto.randomUUID(),
-      type: "text",
-      message,
-      senderId: socket.id,
-      senderName:
-        userInfo.name || "User",
-      room: roomId,
-      timestamp: Date.now()
-    };
-
-
-    io.to(roomId).emit(
-      "chat-message",
-      chatMessage
-    );
-  });
-
-
-  /* =======================================================
-     MEDIA MESSAGE
-     
-     Supports:
-       - photo
-       - video
-     
-     Expected data:
-       {
-         name,
-         type,
-         size,
-         data
-       }
-     
-     data can be:
-       ArrayBuffer
-       Uint8Array
-       Buffer
-       base64 string
-  ======================================================= */
-
-  socket.on("media-message", async (data = {}) => {
-
-    const roomId =
-      socketRooms.get(socket.id);
-
-    if (!roomId) {
-
-      socket.emit("media-error", {
-        message:
-          "You are not inside a room."
-      });
-
-      return;
-    }
-
-
-    const mediaType =
-      typeof data.type === "string"
-        ? data.type
-        : "";
-
-
-    /*
-      Only photos and videos.
-    */
-    const allowed =
-      mediaType.startsWith("image/") ||
-      mediaType.startsWith("video/");
-
-
-    if (!allowed) {
-
-      socket.emit("media-error", {
-        message:
-          "Only photo and video files are allowed."
-      });
-
-      return;
-    }
-
-
-    let fileSize =
-      Number(data.size || 0);
-
-
-    /*
-      If size isn't supplied,
-      calculate from incoming data.
-    */
-    if (!fileSize && data.data) {
-
-      if (Buffer.isBuffer(data.data)) {
-        fileSize = data.data.length;
-      }
-
-      else if (
-        data.data instanceof ArrayBuffer
-      ) {
-        fileSize =
-          data.data.byteLength;
-      }
-
-      else if (
-        typeof data.data === "string"
-      ) {
-        /*
-          Approximate decoded base64 size.
-        */
-        const base64 =
-          data.data.includes(",")
-            ? data.data.split(",")[1]
-            : data.data;
-
-        fileSize =
-          Math.floor(
-            base64.length * 3 / 4
-          );
-      }
-    }
-
-
-    /*
-      50 MB limit
-    */
-    if (
-      !Number.isFinite(fileSize) ||
-      fileSize <= 0 ||
-      fileSize > MAX_MEDIA_SIZE
-    ) {
-
-      socket.emit("media-error", {
-        message:
-          `Maximum media size is ${formatBytes(MAX_MEDIA_SIZE)}.`
-      });
-
-      return;
-    }
-
-
-    const userInfo =
-      socketUsers.get(socket.id) || {};
-
-
-    /*
-      We don't permanently save the file.
-      It is only relayed to room members.
-    */
-    const mediaMessage = {
-      id: crypto.randomUUID(),
-      type: "media",
-
-      mediaType,
-
-      name:
-        typeof data.name === "string"
-          ? data.name.slice(0, 200)
-          : "media",
-
-      size: fileSize,
-
-      /*
-        Client receives the original data.
-      */
-      data: data.data,
-
-      senderId: socket.id,
-
-      senderName:
-        userInfo.name || "User",
-
-      room: roomId,
-
-      timestamp: Date.now()
-    };
-
-
-    io.to(roomId).emit(
-      "media-message",
-      mediaMessage
-    );
-  });
-
-
-  /* =======================================================
-     MEDIA MESSAGE ALIAS
-  ======================================================= */
-
-  socket.on("send-media", (data = {}) => {
-
-    /*
-      Reuse same media event logic.
-      Triggering the event internally isn't
-      necessary; process it directly.
-    */
-
-    const roomId =
-      socketRooms.get(socket.id);
-
-    if (!roomId) return;
-
-
-    const mediaType =
-      typeof data.type === "string"
-        ? data.type
-        : "";
-
-
-    const allowed =
-      mediaType.startsWith("image/") ||
-      mediaType.startsWith("video/");
-
-
-    if (!allowed) {
-      socket.emit("media-error", {
-        message:
-          "Only photo and video files are allowed."
-      });
-
-      return;
-    }
-
-
-    let fileSize =
-      Number(data.size || 0);
-
-
-    if (!fileSize && data.data) {
-
-      if (Buffer.isBuffer(data.data)) {
-        fileSize = data.data.length;
-      }
-
-      else if (
-        data.data instanceof ArrayBuffer
-      ) {
-        fileSize =
-          data.data.byteLength;
-      }
-
-      else if (
-        typeof data.data === "string"
-      ) {
-
-        const base64 =
-          data.data.includes(",")
-            ? data.data.split(",")[1]
-            : data.data;
-
-        fileSize =
-          Math.floor(
-            base64.length * 3 / 4
-          );
-      }
-    }
-
-
-    if (
-      !Number.isFinite(fileSize) ||
-      fileSize <= 0 ||
-      fileSize > MAX_MEDIA_SIZE
-    ) {
-
-      socket.emit("media-error", {
-        message:
-          `Maximum media size is ${formatBytes(MAX_MEDIA_SIZE)}.`
-      });
-
-      return;
-    }
-
-
-    const userInfo =
-      socketUsers.get(socket.id) || {};
-
-
-    io.to(roomId).emit(
-      "media-message",
-      {
-        id: crypto.randomUUID(),
-        type: "media",
-        mediaType,
-
-        name:
-          typeof data.name === "string"
-            ? data.name.slice(0, 200)
-            : "media",
-
-        size: fileSize,
-        data: data.data,
-
-        senderId: socket.id,
-
-        senderName:
-          userInfo.name || "User",
-
-        room: roomId,
-
-        timestamp: Date.now()
-      }
-    );
-  });
-
-
-  /* =======================================================
-     TYPING INDICATOR
-  ======================================================= */
-
-  socket.on("typing", (data = {}) => {
-
-    const roomId =
-      socketRooms.get(socket.id);
-
-    if (!roomId) return;
-
-
-    const userInfo =
-      socketUsers.get(socket.id) || {};
-
-
-    socket.to(roomId).emit(
-      "typing",
-      {
-        senderId: socket.id,
-        senderName:
-          userInfo.name || "User",
-        typing:
-          Boolean(data.typing)
-      }
-    );
-  });
-
-
-  /* =======================================================
-     FRIEND / USER ONLINE CHECK
-  ======================================================= */
-
-  socket.on("check-room", (data = {}) => {
-
-    const roomId =
-      typeof data.room === "string"
-        ? data.room.trim().toUpperCase()
-        : "";
-
-
-    if (!roomId) {
-      socket.emit("room-status", {
-        room: roomId,
-        online: false,
-        count: 0
-      });
-
-      return;
-    }
-
-
-    const room =
-      rooms.get(roomId);
-
-
-    const count =
-      room ? room.size : 0;
-
-
-    socket.emit("room-status", {
-      room: roomId,
-      online: count > 0,
-      count,
-      maxUsers: MAX_USERS_PER_ROOM
-    });
-  });
-
-
-  /* =======================================================
-     GET CURRENT ROOM USERS
-  ======================================================= */
-
-  socket.on("get-room-users", () => {
-
-    const roomId =
-      socketRooms.get(socket.id);
-
-    if (!roomId) return;
-
-
-    socket.emit("room-users", {
-      room: roomId,
-      users:
-        getRoomUsers(
-          roomId,
-          socket.id
-        ),
-      count:
-        rooms.get(roomId)?.size || 0,
-      maxUsers:
-        MAX_USERS_PER_ROOM
-    });
-  });
-
-
-  /* =======================================================
-     DISCONNECT
-  ======================================================= */
-
-  socket.on("disconnect", (reason) => {
-
-    console.log(
-      "Socket disconnected:",
-      socket.id,
-      reason
-    );
-
-
-    const roomId =
-      socketRooms.get(socket.id);
-
-
-    leaveCurrentRoom(
-      socket,
-      "disconnect"
-    );
-
-
-    socketPermanentRooms.delete(
-      socket.id
-    );
-
-    socketUsers.delete(
-      socket.id
-    );
-
-
-    /*
-      Don't immediately delete push subscription.
-      The user may reconnect.
-    */
-
-
-    if (roomId) {
-      console.log(
-        `User left room ${roomId}`
-      );
-    }
-  });
-});
-
-
-/* =========================================================
-   FORMAT BYTES
-========================================================= */
-
-function formatBytes(bytes) {
-
-  if (!Number.isFinite(bytes)) {
-    return "0 B";
-  }
-
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-
-  if (bytes < 1024 * 1024 * 1024) {
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  }
-
-  return `${(
-    bytes /
-    (1024 * 1024 * 1024)
-  ).toFixed(1)} GB`;
-}
-
-
-/* =========================================================
-   HEALTH CHECK
-========================================================= */
-
-app.get("/health", (req, res) => {
-
-  res.json({
-    ok: true,
-    service: "JH Video Call",
-    maxUsersPerRoom: MAX_USERS_PER_ROOM,
-    maxMediaSize:
-      formatBytes(MAX_MEDIA_SIZE),
-    pushEnabled,
-    uptime:
-      Math.floor(process.uptime())
-  });
-});
-
-
-/* =========================================================
-   START SERVER
-========================================================= */
-
-server.listen(
-  PORT,
-  "0.0.0.0",
-  () => {
-
-    console.log(
-      `Server running on port ${PORT}`
-    );
-
-    console.log(
-      `Maximum users per room: ${MAX_USERS_PER_ROOM}`
-    );
-
-    console.log(
-      `Maximum media size: ${formatBytes(MAX_MEDIA_SIZE)}`
-    );
-  }
 );
 
 
 /* =========================================================
-   PROCESS ERROR HANDLING
+   SERVER START
 ========================================================= */
 
-process.on("uncaughtException", (error) => {
-  console.error(
-    "Uncaught Exception:",
-    error
-  );
-});
+const PORT =
+    process.env.PORT ||
+    10000;
 
 
-process.on("unhandledRejection", (error) => {
-  console.error(
-    "Unhandled Rejection:",
-    error
-  );
-});
+server.listen(
+    PORT,
+    "0.0.0.0",
+    () => {
+
+        console.log(
+            "===================================="
+        );
+
+        console.log(
+            "   JH SECURE CAM SERVER ONLINE"
+        );
+
+        console.log(
+            "===================================="
+        );
+
+        console.log(
+            `Server running on port ${PORT}`
+        );
+
+        console.log(
+            `Maximum users per room: ${MAX_USERS_PER_ROOM}`
+        );
+
+        console.log(
+            `Maximum media size: ${MAX_MEDIA_BYTES / (1024 * 1024)} MB`
+        );
+
+        console.log(
+            `Web Push: ${pushEnabled ? "ENABLED" : "DISABLED"}`
+        );
+    }
+);
