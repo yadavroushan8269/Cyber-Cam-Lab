@@ -5,1470 +5,1015 @@
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
   >
 
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#020502">
 
-  <title>ROUSHAN CCTV CALL</title>
+  <title>JH Secure Cam</title>
 
   <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
 
-  <!-- =========================================================
-       MAIN APP
-  ========================================================== -->
+<div class="app">
 
-  <div id="app" class="app">
+  <!-- =====================================================
+       TOP BAR
+  ====================================================== -->
 
-    <!-- =======================================================
-         TOP HEADER
-    ======================================================== -->
+  <header class="topbar">
 
-    <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">◉</div>
 
-      <div class="brand">
-        <div class="brand-icon">◉</div>
+      <div>
+        <h1>JH SECURE CAM</h1>
+        <p>PRIVATE VIDEO NETWORK</p>
+      </div>
+    </div>
 
-        <div class="brand-text">
-          <h1>ROUSHAN<span>_CCTV</span></h1>
-          <p>SECURE VIDEO COMMUNICATION SYSTEM</p>
-        </div>
+    <div class="connection-box">
+      <span id="connectionDot">●</span>
+      <span id="connectionState">OFFLINE</span>
+    </div>
+
+  </header>
+
+
+  <!-- =====================================================
+       STATUS
+  ====================================================== -->
+
+  <div class="status-line">
+
+    <span class="terminal-symbol">&gt;_</span>
+
+    <span id="status">
+      Initializing secure connection...
+    </span>
+
+  </div>
+
+
+  <!-- =====================================================
+       CCTV HEADER
+  ====================================================== -->
+
+  <section class="cctv-header">
+
+    <div>
+      <span class="terminal-small">CAMERA_NETWORK</span>
+      <h2>LIVE MONITOR</h2>
+    </div>
+
+    <div class="online-counter">
+      <span class="pulse-dot"></span>
+      <span id="onlineCount">0 / 6 ONLINE</span>
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       SIX CAMERA CCTV GRID
+  ====================================================== -->
+
+  <main class="videos" id="videoGrid">
+
+    <!-- LOCAL -->
+
+    <div
+      class="video-card local-card"
+      id="localTile"
+    >
+
+      <video
+        id="localVideo"
+        autoplay
+        muted
+        playsinline
+      ></video>
+
+      <div class="camera-overlay"></div>
+
+      <div class="camera-label">
+        <span class="camera-status-dot"></span>
+        CAM 01 • YOU
       </div>
 
-      <div class="connection-status">
-        <span id="connectionDot" class="status-dot offline"></span>
-        <span id="connectionState">OFFLINE</span>
-      </div>
-
-    </header>
-
-
-    <!-- =======================================================
-         SYSTEM STATUS
-    ======================================================== -->
-
-    <div class="system-bar">
-
-      <div class="system-item">
-        <span class="system-label">SYSTEM</span>
-        <span id="systemStatus">READY</span>
-      </div>
-
-      <div class="system-item">
-        <span class="system-label">ROOM</span>
-        <span id="currentRoomDisplay">----</span>
-      </div>
-
-      <div class="system-item">
-        <span class="system-label">USERS</span>
-        <span id="onlineCount">0/6</span>
+      <div class="camera-number">
+        01
       </div>
 
     </div>
 
 
-    <!-- =======================================================
-         MAIN CONTENT
-    ======================================================== -->
+    <!-- REMOTE 2 -->
 
-    <main class="main-content">
+    <div
+      class="video-card empty"
+      id="cameraTile2"
+    >
+
+      <video
+        id="remoteVideo"
+        autoplay
+        playsinline
+      ></video>
+
+      <div class="camera-overlay"></div>
+
+      <div class="camera-label">
+        <span class="camera-status-dot"></span>
+        CAM 02
+      </div>
+
+      <div class="camera-number">
+        02
+      </div>
+
+    </div>
 
 
-      <!-- =====================================================
-           CCTV HEADER
-      ====================================================== -->
+    <!-- REMOTE 3 -->
 
-      <section class="cctv-header">
+    <div
+      class="video-card empty"
+      id="cameraTile3"
+    >
+
+      <video
+        id="remoteVideo3"
+        autoplay
+        playsinline
+      ></video>
+
+      <div class="camera-overlay"></div>
+
+      <div class="camera-label">
+        <span class="camera-status-dot"></span>
+        CAM 03
+      </div>
+
+      <div class="camera-number">
+        03
+      </div>
+
+    </div>
+
+
+    <!-- REMOTE 4 -->
+
+    <div
+      class="video-card empty"
+      id="cameraTile4"
+    >
+
+      <video
+        id="remoteVideo4"
+        autoplay
+        playsinline
+      ></video>
+
+      <div class="camera-overlay"></div>
+
+      <div class="camera-label">
+        <span class="camera-status-dot"></span>
+        CAM 04
+      </div>
+
+      <div class="camera-number">
+        04
+      </div>
+
+    </div>
+
+
+    <!-- REMOTE 5 -->
+
+    <div
+      class="video-card empty"
+      id="cameraTile5"
+    >
+
+      <video
+        id="remoteVideo5"
+        autoplay
+        playsinline
+      ></video>
+
+      <div class="camera-overlay"></div>
+
+      <div class="camera-label">
+        <span class="camera-status-dot"></span>
+        CAM 05
+      </div>
+
+      <div class="camera-number">
+        05
+      </div>
+
+    </div>
+
+
+    <!-- REMOTE 6 -->
+
+    <div
+      class="video-card empty"
+      id="cameraTile6"
+    >
+
+      <video
+        id="remoteVideo6"
+        autoplay
+        playsinline
+      ></video>
+
+      <div class="camera-overlay"></div>
+
+      <div class="camera-label">
+        <span class="camera-status-dot"></span>
+        CAM 06
+      </div>
+
+      <div class="camera-number">
+        06
+      </div>
+
+    </div>
+
+  </main>
+
+
+  <!-- =====================================================
+       BOTTOM CONTROLS
+  ====================================================== -->
+
+  <nav class="controls" id="controls">
+
+    <button
+      id="cameraBtn"
+      class="control-btn"
+      type="button"
+    >
+      📷 Camera
+    </button>
+
+
+    <button
+      id="micBtn"
+      class="control-btn"
+      type="button"
+    >
+      🎤 Mic
+    </button>
+
+
+    <!-- IMPORTANT: CAMERA SWITCH -->
+
+    <button
+      id="switchCameraBtn"
+      class="control-btn"
+      type="button"
+    >
+      🔄 Switch Camera
+    </button>
+
+
+    <!-- MIRROR -->
+
+    <button
+      id="mirrorBtn"
+      class="control-btn"
+      type="button"
+    >
+      🪞 Mirror
+    </button>
+
+
+    <!-- FILTERS -->
+
+    <button
+      id="filterBtn"
+      class="control-btn"
+      type="button"
+    >
+      🎨 Filters
+    </button>
+
+
+    <!-- MY ROOM -->
+
+    <button
+      id="myRoomBtn"
+      class="control-btn"
+      type="button"
+    >
+      🆔 My Room
+    </button>
+
+
+    <!-- JOIN -->
+
+    <button
+      id="joinRoomBtn"
+      class="control-btn"
+      type="button"
+    >
+      📞 Join Room
+    </button>
+
+
+    <!-- FRIENDS -->
+
+    <button
+      id="friendsBtn"
+      class="control-btn"
+      type="button"
+    >
+      👥 Add Friends
+    </button>
+
+
+    <!-- CHAT -->
+
+    <button
+      id="chatBtn"
+      class="control-btn"
+      type="button"
+    >
+      💬 Chat
+    </button>
+
+
+    <!-- END -->
+
+    <button
+      id="endBtn"
+      class="control-btn danger"
+      type="button"
+    >
+      ⛔ End Call
+    </button>
+
+  </nav>
+
+
+  <!-- =====================================================
+       MY ROOM PANEL
+  ====================================================== -->
+
+  <div
+    id="myRoomOverlay"
+    class="overlay hidden"
+  >
+
+    <div class="panel">
+
+      <div class="panel-header">
 
         <div>
-          <span class="terminal-symbol">&gt;_</span>
-          <span class="cctv-title">LIVE CAMERA MONITOR</span>
-        </div>
-
-        <div class="cctv-status">
-          <span class="live-dot"></span>
-          LIVE
-        </div>
-
-      </section>
-
-
-      <!-- =====================================================
-           6 CAMERA GRID
-      ====================================================== -->
-
-      <section id="videoGrid" class="videos">
-
-
-        <!-- ===================================================
-             CAMERA 01 - LOCAL USER
-        ==================================================== -->
-
-        <div
-          id="localTile"
-          class="video-card local-camera empty"
-          data-camera="1"
-        >
-
-          <video
-            id="localVideo"
-            autoplay
-            muted
-            playsinline
-          ></video>
-
-          <div class="camera-overlay"></div>
-
-          <div class="camera-top">
-            <span class="camera-number">CAM 01</span>
-            <span class="camera-live">
-              <span class="mini-dot"></span>
-              LOCAL
-            </span>
-          </div>
-
-          <div class="camera-label">
-            <span id="localUserLabel">YOU</span>
-          </div>
-
-        </div>
-
-
-        <!-- ===================================================
-             CAMERA 02
-        ==================================================== -->
-
-        <div
-          id="cameraTile2"
-          class="video-card empty"
-          data-camera="2"
-        >
-
-          <video
-            id="remoteVideo"
-            autoplay
-            playsinline
-          ></video>
-
-          <div class="camera-overlay"></div>
-
-          <div class="camera-top">
-            <span class="camera-number">CAM 02</span>
-            <span class="camera-live">
-              <span class="mini-dot"></span>
-              WAITING
-            </span>
-          </div>
-
-          <div class="camera-label">
-            <span id="cameraLabel2">CAMERA 02</span>
-          </div>
-
-        </div>
-
-
-        <!-- ===================================================
-             CAMERA 03
-        ==================================================== -->
-
-        <div
-          id="cameraTile3"
-          class="video-card empty"
-          data-camera="3"
-        >
-
-          <video
-            id="remoteVideo3"
-            autoplay
-            playsinline
-          ></video>
-
-          <div class="camera-overlay"></div>
-
-          <div class="camera-top">
-            <span class="camera-number">CAM 03</span>
-            <span class="camera-live">
-              <span class="mini-dot"></span>
-              WAITING
-            </span>
-          </div>
-
-          <div class="camera-label">
-            <span id="cameraLabel3">CAMERA 03</span>
-          </div>
-
-        </div>
-
-
-        <!-- ===================================================
-             CAMERA 04
-        ==================================================== -->
-
-        <div
-          id="cameraTile4"
-          class="video-card empty"
-          data-camera="4"
-        >
-
-          <video
-            id="remoteVideo4"
-            autoplay
-            playsinline
-          ></video>
-
-          <div class="camera-overlay"></div>
-
-          <div class="camera-top">
-            <span class="camera-number">CAM 04</span>
-            <span class="camera-live">
-              <span class="mini-dot"></span>
-              WAITING
-            </span>
-          </div>
-
-          <div class="camera-label">
-            <span id="cameraLabel4">CAMERA 04</span>
-          </div>
-
-        </div>
-
-
-        <!-- ===================================================
-             CAMERA 05
-        ==================================================== -->
-
-        <div
-          id="cameraTile5"
-          class="video-card empty"
-          data-camera="5"
-        >
-
-          <video
-            id="remoteVideo5"
-            autoplay
-            playsinline
-          ></video>
-
-          <div class="camera-overlay"></div>
-
-          <div class="camera-top">
-            <span class="camera-number">CAM 05</span>
-            <span class="camera-live">
-              <span class="mini-dot"></span>
-              WAITING
-            </span>
-          </div>
-
-          <div class="camera-label">
-            <span id="cameraLabel5">CAMERA 05</span>
-          </div>
-
-        </div>
-
-
-        <!-- ===================================================
-             CAMERA 06
-        ==================================================== -->
-
-        <div
-          id="cameraTile6"
-          class="video-card empty"
-          data-camera="6"
-        >
-
-          <video
-            id="remoteVideo6"
-            autoplay
-            playsinline
-          ></video>
-
-          <div class="camera-overlay"></div>
-
-          <div class="camera-top">
-            <span class="camera-number">CAM 06</span>
-            <span class="camera-live">
-              <span class="mini-dot"></span>
-              WAITING
-            </span>
-          </div>
-
-          <div class="camera-label">
-            <span id="cameraLabel6">CAMERA 06</span>
-          </div>
-
-        </div>
-
-      </section>
-
-
-      <!-- =====================================================
-           STATUS TERMINAL
-      ====================================================== -->
-
-      <section class="terminal-panel">
-
-        <div class="terminal-header">
-
-          <span>
-            <span class="terminal-dot red"></span>
-            <span class="terminal-dot yellow"></span>
-            <span class="terminal-dot green"></span>
-          </span>
-
-          <span class="terminal-title">
-            SYSTEM TERMINAL
-          </span>
-
-        </div>
-
-        <div class="terminal-body">
-
-          <span class="terminal-prefix">root@roushan:~$</span>
-
-          <span id="status">
-            System initialized. Waiting for connection...
-          </span>
-
-          <span class="terminal-cursor">_</span>
-
-        </div>
-
-      </section>
-
-    </main>
-
-
-    <!-- =======================================================
-         BOTTOM CONTROL BAR
-    ======================================================== -->
-
-    <nav id="bottomControls" class="bottom-controls">
-
-
-      <!-- MIC -->
-
-      <button
-        id="micBtn"
-        class="control-btn"
-        type="button"
-        title="Mute / Unmute microphone"
-      >
-
-        <span class="control-icon">🎙</span>
-        <span class="control-text">MIC</span>
-
-      </button>
-
-
-      <!-- MIRROR -->
-
-      <button
-        id="mirrorBtn"
-        class="control-btn"
-        type="button"
-        title="Mirror your camera"
-      >
-
-        <span class="control-icon">↔</span>
-        <span class="control-text">MIRROR</span>
-
-      </button>
-
-
-      <!-- SWITCH CAMERA -->
-
-      <button
-        id="switchCameraBtn"
-        class="control-btn"
-        type="button"
-        title="Switch front / back camera"
-      >
-
-        <span class="control-icon">⟳</span>
-        <span class="control-text">CAMERA</span>
-
-      </button>
-
-
-      <!-- FILTERS -->
-
-      <button
-        id="filterBtn"
-        class="control-btn"
-        type="button"
-        title="Camera filters"
-      >
-
-        <span class="control-icon">◈</span>
-        <span class="control-text">FILTERS</span>
-
-      </button>
-
-
-      <!-- MY ROOM -->
-
-      <button
-        id="myRoomBtn"
-        class="control-btn"
-        type="button"
-        title="Show / hide your permanent Room ID"
-      >
-
-        <span class="control-icon">▣</span>
-        <span class="control-text">MY ROOM</span>
-
-      </button>
-
-
-      <!-- JOIN ROOM -->
-
-      <button
-        id="joinRoomBtn"
-        class="control-btn"
-        type="button"
-        title="Join another Room ID"
-      >
-
-        <span class="control-icon">➜</span>
-        <span class="control-text">JOIN</span>
-
-      </button>
-
-
-      <!-- ADD FRIENDS -->
-
-      <button
-        id="friendsBtn"
-        class="control-btn"
-        type="button"
-        title="Manage friends"
-      >
-
-        <span class="control-icon">♧</span>
-        <span class="control-text">FRIENDS</span>
-
-      </button>
-
-
-      <!-- CHAT -->
-
-      <button
-        id="chatBtn"
-        class="control-btn chat-control-btn"
-        type="button"
-        title="Open chat"
-      >
-
-        <span class="control-icon">▤</span>
-        <span class="control-text">CHAT</span>
-
-        <span
-          id="chatUnreadBadge"
-          class="chat-unread-badge hidden"
-        >
-          0
-        </span>
-
-      </button>
-
-
-      <!-- END CALL -->
-
-      <button
-        id="endBtn"
-        class="control-btn danger-control"
-        type="button"
-        title="End current call"
-      >
-
-        <span class="control-icon">■</span>
-        <span class="control-text">END</span>
-
-      </button>
-
-    </nav>
-
-
-    <!-- =======================================================
-         MY ROOM PANEL
-    ======================================================== -->
-
-    <div
-      id="myRoomOverlay"
-      class="overlay hidden"
-      aria-hidden="true"
-    >
-
-      <div
-        id="myRoomPanel"
-        class="modal-panel room-panel"
-      >
-
-        <button
-          id="closeMyRoomBtn"
-          class="modal-close"
-          type="button"
-          aria-label="Close"
-        >
-          ×
-        </button>
-
-        <div class="modal-icon">▣</div>
-
-        <div class="modal-title">
-          YOUR PERMANENT ROOM
-        </div>
-
-        <div class="modal-subtitle">
-          THIS ROOM ID BELONGS TO YOU
-        </div>
-
-
-        <div class="room-id-box">
-
-          <span
-            id="myRoomValue"
-            class="room-id-value"
-          >
-            ------
-          </span>
-
-        </div>
-
-
-        <div class="room-actions">
-
-          <button
-            id="copyRoomBtn"
-            class="modal-action-btn"
-            type="button"
-          >
-            COPY ROOM ID
-          </button>
-
-          <button
-            id="showQrBtn"
-            class="modal-action-btn"
-            type="button"
-          >
-            SHOW QR
-          </button>
-
-        </div>
-
-
-        <!-- QR -->
-
-        <div
-          id="qrBox"
-          class="qr-box hidden"
-        >
-
-          <div
-            id="qrcode"
-            class="qrcode"
-          ></div>
-
-          <p>
-            SCAN THIS QR TO CONNECT
-          </p>
-
-        </div>
-
-      </div>
-
-    </div>
-
-
-    <!-- =======================================================
-         JOIN ROOM PANEL
-    ======================================================== -->
-
-    <div
-      id="joinRoomOverlay"
-      class="overlay hidden"
-      aria-hidden="true"
-    >
-
-      <div class="modal-panel">
-
-        <button
-          id="closeJoinRoomBtn"
-          class="modal-close"
-          type="button"
-          aria-label="Close"
-        >
-          ×
-        </button>
-
-        <div class="modal-icon">➜</div>
-
-        <div class="modal-title">
-          JOIN ROOM
-        </div>
-
-        <div class="modal-subtitle">
-          ENTER THE USER ROOM ID
-        </div>
-
-
-        <div class="input-group">
-
-          <label for="joinRoomInput">
-            ROOM ID
-          </label>
-
-          <input
-            id="joinRoomInput"
-            type="text"
-            maxlength="40"
-            autocomplete="off"
-            autocapitalize="characters"
-            spellcheck="false"
-            placeholder="ENTER ROOM ID"
-          >
-
-        </div>
-
-
-        <button
-          id="joinRoomConfirmBtn"
-          class="primary-modal-btn"
-          type="button"
-        >
-          CALL USER
-        </button>
-
-
-        <button
-          id="scanBtn"
-          class="secondary-modal-btn"
-          type="button"
-        >
-          SCAN QR
-        </button>
-
-
-        <!-- QR SCANNER -->
-
-        <div
-          id="scanner"
-          class="scanner hidden"
-        ></div>
-
-      </div>
-
-    </div>
-
-
-    <!-- =======================================================
-         FRIENDS PANEL
-    ======================================================== -->
-
-    <div
-      id="friendsOverlay"
-      class="overlay hidden"
-      aria-hidden="true"
-    >
-
-      <div class="modal-panel friends-panel">
-
-        <button
-          id="closeFriendsBtn"
-          class="modal-close"
-          type="button"
-          aria-label="Close"
-        >
-          ×
-        </button>
-
-        <div class="modal-icon">♧</div>
-
-        <div class="modal-title">
-          FRIENDS
-        </div>
-
-        <div class="modal-subtitle">
-          SAVE ROOM IDS FOR QUICK CALLS
-        </div>
-
-
-        <!-- ADD FRIEND FORM -->
-
-        <div class="friend-form">
-
-          <div class="input-group">
-
-            <label for="friendNameInput">
-              FRIEND NAME
-            </label>
-
-            <input
-              id="friendNameInput"
-              type="text"
-              maxlength="30"
-              autocomplete="off"
-              placeholder="FRIEND NAME"
-            >
-
-          </div>
-
-
-          <div class="input-group">
-
-            <label for="friendRoomInput">
-              ROOM ID
-            </label>
-
-            <input
-              id="friendRoomInput"
-              type="text"
-              maxlength="40"
-              autocomplete="off"
-              autocapitalize="characters"
-              spellcheck="false"
-              placeholder="ROOM ID"
-            >
-
-          </div>
-
-
-          <button
-            id="addFriendConfirmBtn"
-            class="primary-modal-btn"
-            type="button"
-          >
-            + ADD FRIEND
-          </button>
-
-        </div>
-
-
-        <!-- FRIEND COUNT -->
-
-        <div class="friends-count">
-
-          <span>STORED CONTACTS</span>
-
-          <span id="friendsCount">
-            0
-          </span>
-
-        </div>
-
-
-        <!-- FRIEND LIST -->
-
-        <div
-          id="friendsList"
-          class="friends-list"
-        >
-
-          <div
-            id="noFriendsMessage"
-            class="no-friends"
-          >
-            NO FRIENDS ADDED YET
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-
-
-    <!-- =======================================================
-         FILTER PANEL
-    ======================================================== -->
-
-    <div
-      id="filterOverlay"
-      class="overlay hidden"
-      aria-hidden="true"
-    >
-
-      <div class="modal-panel filter-panel">
-
-        <button
-          id="closeFilterBtn"
-          class="modal-close"
-          type="button"
-          aria-label="Close"
-        >
-          ×
-        </button>
-
-        <div class="modal-icon">◈</div>
-
-        <div class="modal-title">
-          CAMERA FILTERS
-        </div>
-
-        <div class="modal-subtitle">
-          SELECT LOCAL CAMERA EFFECT
-        </div>
-
-
-        <div
-          id="filterGrid"
-          class="filter-grid"
-        >
-
-          <button
-            class="filter-option active"
-            type="button"
-            data-filter="none"
-          >
-            <span>◉</span>
-            NORMAL
-          </button>
-
-          <button
-            class="filter-option"
-            type="button"
-            data-filter="vibrant"
-          >
-            <span>◆</span>
-            VIBRANT
-          </button>
-
-          <button
-            class="filter-option"
-            type="button"
-            data-filter="warm"
-          >
-            <span>◆</span>
-            WARM
-          </button>
-
-          <button
-            class="filter-option"
-            type="button"
-            data-filter="cool"
-          >
-            <span>◆</span>
-            COOL
-          </button>
-
-          <button
-            class="filter-option"
-            type="button"
-            data-filter="gray"
-          >
-            <span>◆</span>
-            GRAYSCALE
-          </button>
-
-          <button
-            class="filter-option"
-            type="button"
-            data-filter="contrast"
-          >
-            <span>◆</span>
-            HIGH CONTRAST
-          </button>
-
-          <button
-            class="filter-option"
-            type="button"
-            data-filter="bright"
-          >
-            <span>◆</span>
-            BRIGHT
-          </button>
-
-          <button
-            class="filter-option"
-            type="button"
-            data-filter="dark"
-          >
-            <span>◆</span>
-            DARK
-          </button>
-
-          <button
-            class="filter-option"
-            type="button"
-            data-filter="sepia"
-          >
-            <span>◆</span>
-            SEPIA
-          </button>
-
-          <button
-            class="filter-option"
-            type="button"
-            data-filter="cinema"
-          >
-            <span>◆</span>
-            CINEMA
-          </button>
-
-          <button
-            class="filter-option"
-            type="button"
-            data-filter="neon"
-          >
-            <span>◆</span>
-            NEON
-          </button>
-
-        </div>
-
-      </div>
-
-    </div>
-
-
-    <!-- =======================================================
-         CHAT PANEL
-    ======================================================== -->
-
-    <aside
-      id="chatPanel"
-      class="chat-panel hidden"
-      aria-hidden="true"
-    >
-
-
-      <!-- CHAT HEADER -->
-
-      <div class="chat-header">
-
-        <div class="chat-header-left">
-
-          <div class="chat-header-icon">
-            ▤
-          </div>
-
-          <div>
-
-            <div class="chat-title">
-              SECURE CHAT
-            </div>
-
-            <div
-              id="chatParticipants"
-              class="chat-participants"
-            >
-              ROOM USERS
-            </div>
-
-          </div>
-
-        </div>
-
-
-        <div class="chat-header-actions">
-
-          <button
-            id="clearChatBtn"
-            class="chat-head-btn"
-            type="button"
-            title="Clear chat"
-          >
-            ⌫
-          </button>
-
-          <button
-            id="closeChatBtn"
-            class="chat-head-btn"
-            type="button"
-            title="Close chat"
-          >
-            ×
-          </button>
-
-        </div>
-
-      </div>
-
-
-      <!-- =====================================================
-           REPLY PREVIEW
-      ====================================================== -->
-
-      <div
-        id="replyPreview"
-        class="reply-preview hidden"
-      >
-
-        <div class="reply-preview-content">
-
-          <div class="reply-label">
-            REPLYING TO
-          </div>
-
-          <div
-            id="replyPreviewText"
-            class="reply-preview-text"
-          >
-            Message
-          </div>
-
+          <span class="terminal-small">IDENTITY</span>
+          <h3>MY ROOM ID</h3>
         </div>
 
         <button
-          id="cancelReplyBtn"
+          id="myRoomCloseBtn"
+          class="close-btn"
           type="button"
-          class="cancel-reply"
         >
-          ×
+          ✕
         </button>
 
       </div>
 
 
-      <!-- =====================================================
-           CHAT MESSAGES
-      ====================================================== -->
+      <div class="room-id-display">
 
-      <div
-        id="chatMessages"
-        class="chat-messages"
-      >
-
-        <div
-          id="chatEmptyState"
-          class="chat-empty"
-        >
-
-          <div class="chat-empty-icon">
-            ▤
-          </div>
-
-          <div class="chat-empty-title">
-            NO MESSAGES
-          </div>
-
-          <div class="chat-empty-text">
-            SEND A MESSAGE TO START THE CONVERSATION
-          </div>
-
-        </div>
-
-      </div>
-
-
-      <!-- =====================================================
-           MEDIA PREVIEW
-      ====================================================== -->
-
-      <div
-        id="mediaPreview"
-        class="media-preview hidden"
-      >
-
-        <div class="media-preview-header">
-
-          <span>
-            FILE READY
-          </span>
-
-          <button
-            id="cancelMediaBtn"
-            type="button"
-          >
-            ×
-          </button>
-
-        </div>
-
-
-        <div class="media-preview-content">
-
-          <div
-            id="mediaPreviewThumb"
-            class="media-preview-thumb"
-          ></div>
-
-
-          <div class="media-preview-info">
-
-            <div
-              id="mediaFileName"
-              class="media-file-name"
-            >
-              file.jpg
-            </div>
-
-            <div
-              id="mediaFileSize"
-              class="media-file-size"
-            >
-              0 MB
-            </div>
-
-            <div
-              id="mediaFileType"
-              class="media-file-type"
-            >
-              IMAGE
-            </div>
-
-          </div>
-
-        </div>
-
-
-        <div class="media-size-warning">
-
-          <span class="warning-icon">ⓘ</span>
-
-          <span>
-            THIS FILE WILL USE
-            <strong id="mediaTransferSize">
-              0 MB
-            </strong>
-            OF DATA
-          </span>
-
-        </div>
-
-
-        <button
-          id="sendMediaBtn"
-          class="send-media-btn"
-          type="button"
-        >
-          SEND FILE
-        </button>
-
-      </div>
-
-
-      <!-- =====================================================
-           UPLOAD PROGRESS
-      ====================================================== -->
-
-      <div
-        id="uploadProgressBox"
-        class="upload-progress hidden"
-      >
-
-        <div class="upload-progress-top">
-
-          <span id="uploadProgressText">
-            SENDING...
-          </span>
-
-          <span id="uploadProgressPercent">
-            0%
-          </span>
-
-        </div>
-
-        <div class="upload-progress-track">
-
-          <div
-            id="uploadProgressBar"
-            class="upload-progress-bar"
-            style="width:0%"
-          ></div>
-
-        </div>
-
-      </div>
-
-
-      <!-- =====================================================
-           CHAT COMPOSER
-      ====================================================== -->
-
-      <div class="chat-composer">
-
-
-        <!-- PHOTO -->
-
-        <button
-          id="photoBtn"
-          class="media-btn"
-          type="button"
-          title="Send photo"
-        >
-          📷
-        </button>
-
-
-        <!-- VIDEO -->
-
-        <button
-          id="videoBtn"
-          class="media-btn"
-          type="button"
-          title="Send video"
-        >
-          🎥
-        </button>
-
-
-        <!-- HIDDEN FILE INPUTS -->
-
-        <input
-          id="photoInput"
-          type="file"
-          accept="image/*"
-          hidden
-        >
-
-        <input
-          id="videoInput"
-          type="file"
-          accept="video/*"
-          hidden
-        >
-
-
-        <!-- TEXT -->
-
-        <textarea
-          id="messageInput"
-          rows="1"
-          maxlength="5000"
-          placeholder="TYPE MESSAGE..."
-          autocomplete="off"
-          spellcheck="true"
-        ></textarea>
-
-
-        <!-- SEND -->
-
-        <button
-          id="sendMessageBtn"
-          class="send-message-btn"
-          type="button"
-          title="Send message"
-        >
-          ➤
-        </button>
-
-      </div>
-
-
-      <!-- CHAT FOOTER -->
-
-      <div class="chat-footer">
-
-        <span>
-          END-TO-END SIGNALLED CHAT
-        </span>
-
-        <span id="chatTypingStatus">
-          READY
+        <span id="myRoomValue">
+          --------
         </span>
 
       </div>
 
-    </aside>
+
+      <button
+        id="copyRoomBtn"
+        class="panel-action"
+        type="button"
+      >
+        📋 Copy Room ID
+      </button>
 
 
-    <!-- =======================================================
-         INCOMING CALL OVERLAY
-    ======================================================== -->
+      <div
+        id="qrBox"
+        class="qr-box"
+      >
 
-    <div
-      id="incomingCallOverlay"
-      class="call-overlay hidden"
-      aria-hidden="true"
-    >
+        <div id="qrcode"></div>
 
-      <div class="incoming-call-card">
-
-        <div class="incoming-signal">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-
-        <div class="incoming-icon">
-          ☎
-        </div>
-
-        <div class="incoming-title">
-          INCOMING CALL
-        </div>
-
-        <div
-          id="incomingCallerText"
-          class="incoming-caller"
-        >
-          ROOM ------ IS CALLING YOU
-        </div>
-
-        <div class="incoming-actions">
-
-          <button
-            id="acceptCallBtn"
-            class="accept-call-btn"
-            type="button"
-          >
-            ✓ ACCEPT
-          </button>
-
-          <button
-            id="rejectCallBtn"
-            class="reject-call-btn"
-            type="button"
-          >
-            ✕ REJECT
-          </button>
-
-        </div>
+        <p>
+          Scan this QR to join my room
+        </p>
 
       </div>
 
     </div>
 
+  </div>
 
-    <!-- =======================================================
-         CONNECTING OVERLAY
-    ======================================================== -->
 
-    <div
-      id="connectingOverlay"
-      class="call-overlay hidden"
-      aria-hidden="true"
-    >
+  <!-- =====================================================
+       JOIN ROOM PANEL
+  ====================================================== -->
 
-      <div class="connecting-card">
+  <div
+    id="joinRoomOverlay"
+    class="overlay hidden"
+  >
 
-        <div class="loading-ring"></div>
+    <div class="panel">
 
-        <div
-          id="connectingText"
-          class="connecting-title"
+      <div class="panel-header">
+
+        <div>
+          <span class="terminal-small">REMOTE ACCESS</span>
+          <h3>JOIN ROOM</h3>
+        </div>
+
+        <button
+          id="joinRoomCloseBtn"
+          class="close-btn"
+          type="button"
         >
-          CONNECTING...
+          ✕
+        </button>
+
+      </div>
+
+
+      <label
+        for="joinRoomInput"
+        class="input-label"
+      >
+        ENTER ROOM ID
+      </label>
+
+
+      <input
+        id="joinRoomInput"
+        class="panel-input"
+        type="text"
+        maxlength="40"
+        autocomplete="off"
+        autocapitalize="characters"
+        placeholder="ROOM ID"
+      >
+
+
+      <button
+        id="joinRoomConfirmBtn"
+        class="panel-action"
+        type="button"
+      >
+        📞 CALL ROOM
+      </button>
+
+
+      <button
+        id="scanBtn"
+        class="panel-action secondary"
+        type="button"
+      >
+        📷 SCAN QR
+      </button>
+
+
+      <div
+        id="scanner"
+        class="scanner hidden"
+      ></div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       ADD FRIENDS PANEL
+  ====================================================== -->
+
+  <div
+    id="friendsOverlay"
+    class="overlay hidden"
+  >
+
+    <div class="panel">
+
+      <div class="panel-header">
+
+        <div>
+          <span class="terminal-small">CONTACT NETWORK</span>
+          <h3>ADD FRIEND</h3>
         </div>
 
-        <div class="connecting-subtitle">
-          ESTABLISHING SECURE VIDEO CHANNEL
+        <button
+          id="friendsCloseBtn"
+          class="close-btn"
+          type="button"
+        >
+          ✕
+        </button>
+
+      </div>
+
+
+      <label
+        for="friendNameInput"
+        class="input-label"
+      >
+        NAME
+      </label>
+
+      <input
+        id="friendNameInput"
+        class="panel-input"
+        type="text"
+        maxlength="40"
+        placeholder="Friend name"
+      >
+
+
+      <label
+        for="friendRoomInput"
+        class="input-label"
+      >
+        ROOM ID
+      </label>
+
+      <input
+        id="friendRoomInput"
+        class="panel-input"
+        type="text"
+        maxlength="40"
+        autocapitalize="characters"
+        placeholder="Friend Room ID"
+      >
+
+
+      <button
+        id="addFriendConfirmBtn"
+        class="panel-action"
+        type="button"
+      >
+        ➕ SAVE FRIEND
+      </button>
+
+
+      <div class="friends-title">
+        SAVED FRIENDS
+        <span>MAX 6</span>
+      </div>
+
+
+      <div
+        id="friendsList"
+        class="friends-list"
+      ></div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       FILTER PANEL
+  ====================================================== -->
+
+  <div
+    id="filterOverlay"
+    class="overlay hidden"
+  >
+
+    <div class="panel filter-panel">
+
+      <div class="panel-header">
+
+        <div>
+          <span class="terminal-small">VIDEO PROCESSOR</span>
+          <h3>CAMERA FILTERS</h3>
         </div>
+
+        <button
+          id="filterCloseBtn"
+          class="close-btn"
+          type="button"
+        >
+          ✕
+        </button>
+
+      </div>
+
+
+      <div class="filter-grid">
+
+        <button
+          class="filter-option active"
+          data-filter="none"
+          type="button"
+        >
+          CLEAR
+        </button>
+
+        <button
+          class="filter-option"
+          data-filter="vibrant"
+          type="button"
+        >
+          VIBRANT
+        </button>
+
+        <button
+          class="filter-option"
+          data-filter="warm"
+          type="button"
+        >
+          WARM
+        </button>
+
+        <button
+          class="filter-option"
+          data-filter="cool"
+          type="button"
+        >
+          COOL
+        </button>
+
+        <button
+          class="filter-option"
+          data-filter="mono"
+          type="button"
+        >
+          MONO
+        </button>
+
+        <button
+          class="filter-option"
+          data-filter="sepia"
+          type="button"
+        >
+          SEPIA
+        </button>
+
+        <button
+          class="filter-option"
+          data-filter="dream"
+          type="button"
+        >
+          DREAM
+        </button>
+
+        <button
+          class="filter-option"
+          data-filter="neon"
+          type="button"
+        >
+          NEON
+        </button>
+
+        <button
+          class="filter-option"
+          data-filter="soft"
+          type="button"
+        >
+          SOFT
+        </button>
+
+        <button
+          class="filter-option"
+          data-filter="contrast"
+          type="button"
+        >
+          HIGH CONTRAST
+        </button>
 
       </div>
 
     </div>
 
+  </div>
 
-    <!-- =======================================================
-         NOTIFICATION PERMISSION
-    ======================================================== -->
 
-    <div
-      id="notificationToast"
-      class="notification-toast hidden"
-    >
+  <!-- =====================================================
+       CHAT PANEL
+  ====================================================== -->
 
-      <div class="notification-icon">
-        🔔
+  <aside
+    id="chatPanel"
+    class="chat-panel hidden"
+  >
+
+    <div class="chat-header">
+
+      <div>
+
+        <span class="terminal-small">
+          SECURE CHANNEL
+        </span>
+
+        <h3>CHAT</h3>
+
       </div>
 
-      <div class="notification-content">
 
-        <div class="notification-title">
-          ENABLE NOTIFICATIONS
-        </div>
+      <button
+        id="chatCloseBtn"
+        class="close-btn"
+        type="button"
+      >
+        ✕
+      </button>
 
-        <div class="notification-text">
-          GET CALL AND MESSAGE ALERTS
-        </div>
+    </div>
+
+
+    <!-- TYPING -->
+
+    <div
+      id="typingIndicator"
+      class="typing-indicator"
+    ></div>
+
+
+    <!-- REPLY BAR -->
+
+    <div
+      id="chatReplyBar"
+      class="chat-reply-bar hidden"
+    >
+
+      <div>
+
+        <span>REPLYING TO</span>
+
+        <strong id="chatReplyText">
+          Message
+        </strong>
 
       </div>
 
       <button
-        id="notificationBtn"
+        id="chatReplyCancelBtn"
         type="button"
       >
-        ENABLE
-      </button>
-
-      <button
-        id="closeNotificationBtn"
-        type="button"
-        class="notification-close"
-      >
-        ×
+        ✕
       </button>
 
     </div>
 
 
-    <!-- =======================================================
-         TOAST
-    ======================================================== -->
+    <!-- MESSAGES -->
 
     <div
-      id="toast"
-      class="toast hidden"
-      role="status"
-      aria-live="polite"
+      id="chatMessages"
+      class="chat-messages"
     >
-      <span id="toastIcon">✓</span>
-      <span id="toastMessage">READY</span>
+
+      <div class="chat-empty">
+        <span>●</span>
+        <p>SECURE CHAT READY</p>
+        <small>
+          Send a message to start conversation.
+        </small>
+      </div>
+
     </div>
 
 
-    <!-- =======================================================
-         HIDDEN LEGACY ROOM INPUT
-         Kept so existing app.js compatibility is maintained.
-    ======================================================== -->
+    <!-- MEDIA PREVIEW -->
+
+    <div
+      id="chatMediaPreview"
+      class="chat-media-preview hidden"
+    >
+
+      <div class="media-preview-icon">
+        📎
+      </div>
+
+      <div class="media-preview-details">
+
+        <strong id="chatMediaName">
+          media.jpg
+        </strong>
+
+        <span id="chatMediaSize">
+          0 MB
+        </span>
+
+      </div>
+
+      <button
+        id="chatMediaCancelBtn"
+        type="button"
+      >
+        ✕
+      </button>
+
+    </div>
+
+
+    <!-- INPUT -->
+
+    <div class="chat-input-area">
+
+      <button
+        id="chatFileBtn"
+        class="chat-tool-btn"
+        type="button"
+        title="Send photo/video"
+      >
+        📎
+      </button>
+
+
+      <input
+        id="chatFileInput"
+        type="file"
+        accept="image/*,video/*"
+        hidden
+      >
+
+
+      <input
+        id="chatInput"
+        type="text"
+        maxlength="5000"
+        autocomplete="off"
+        placeholder="Type message..."
+      >
+
+
+      <button
+        id="chatSendBtn"
+        class="chat-send-btn"
+        type="button"
+      >
+        ➤
+      </button>
+
+    </div>
+
+  </aside>
+
+
+  <!-- =====================================================
+       INCOMING CALL OVERLAY
+  ====================================================== -->
+
+  <div
+    id="incomingCallOverlay"
+    class="call-overlay hidden"
+  >
+
+    <div class="incoming-call-box">
+
+      <div class="incoming-icon">
+        📞
+      </div>
+
+      <span class="terminal-small">
+        INCOMING CONNECTION
+      </span>
+
+      <h2>
+        INCOMING CALL
+      </h2>
+
+      <p id="incomingCallerText">
+        Someone is calling you...
+      </p>
+
+
+      <div class="incoming-actions">
+
+        <button
+          id="acceptCallBtn"
+          class="accept-btn"
+          type="button"
+        >
+          ✓ ACCEPT
+        </button>
+
+        <button
+          id="rejectCallBtn"
+          class="reject-btn"
+          type="button"
+        >
+          ✕ REJECT
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       CONNECTING OVERLAY
+  ====================================================== -->
+
+  <div
+    id="connectingOverlay"
+    class="connecting-overlay hidden"
+  >
+
+    <div class="connecting-box">
+
+      <div class="loading-ring"></div>
+
+      <h3>
+        CONNECTING...
+      </h3>
+
+      <p id="connectingText">
+        Establishing secure video connection
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       HIDDEN OLD COMPATIBILITY ELEMENTS
+       app.js compatibility ke liye
+  ====================================================== -->
+
+  <div
+    id="roomInputWrapper"
+    class="hidden"
+    aria-hidden="true"
+  >
 
     <input
       id="roomInput"
       type="text"
-      maxlength="40"
       readonly
-      hidden
     >
+
+    <button
+      id="createBtn"
+      type="button"
+    >
+      Create Room
+    </button>
 
     <input
       id="targetRoomInput"
       type="text"
-      maxlength="40"
-      hidden
     >
 
   </div>
 
 
-  <!-- =========================================================
-       SOCKET.IO
-  ========================================================== -->
-
-  <script src="/socket.io/socket.io.js"></script>
+</div>
 
 
-  <!-- =========================================================
-       QR CODE GENERATOR
-  ========================================================== -->
+<!-- =======================================================
+     SOCKET.IO
+======================================================== -->
 
-  <script
-    src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"
-  ></script>
+<script src="/socket.io/socket.io.js"></script>
 
 
-  <!-- =========================================================
-       QR SCANNER
-  ========================================================== -->
+<!-- =======================================================
+     QR CODE
+======================================================== -->
 
-  <script
-    src="https://unpkg.com/html5-qrcode"
-    defer
-  ></script>
+<script
+  src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"
+></script>
 
 
-  <!-- =========================================================
-       MAIN APPLICATION
-  ========================================================== -->
+<!-- =======================================================
+     QR SCANNER
+======================================================== -->
 
-  <script
-    src="/app.js"
-    defer
-  ></script>
+<script
+  src="https://unpkg.com/html5-qrcode"
+></script>
+
+
+<!-- =======================================================
+     MAIN APP
+======================================================== -->
+
+<script src="/app.js"></script>
 
 </body>
 </html>
