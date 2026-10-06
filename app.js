@@ -10,6 +10,336 @@
 /* =========================================================
    SOCKET
 ========================================================= */
+/* =========================================================
+   JH SECURE CAM — REAL HACKER TYPING SOUND
+   ========================================================= */
+
+let hackerAudioContext = null;
+let hackerLastKeyTime = 0;
+
+function unlockHackerAudio() {
+    try {
+        const AudioCtx =
+            window.AudioContext ||
+            window.webkitAudioContext;
+
+        if (!AudioCtx) return;
+
+        if (!hackerAudioContext) {
+            hackerAudioContext = new AudioCtx();
+        }
+
+        if (
+            hackerAudioContext.state === "suspended"
+        ) {
+            hackerAudioContext
+                .resume()
+                .catch(() => {});
+        }
+
+    } catch (error) {
+        console.warn(
+            "Hacker audio unavailable:",
+            error
+        );
+    }
+}
+
+
+function playHackerTypingSound() {
+
+    unlockHackerAudio();
+
+    if (!hackerAudioContext) {
+        return;
+    }
+
+    try {
+
+        const ctx =
+            hackerAudioContext;
+
+        const now =
+            ctx.currentTime;
+
+
+        /*
+         * Different frequencies make every
+         * key sound slightly different.
+         */
+
+        const sounds = [
+
+            {
+                type: "square",
+                start: 115,
+                end: 72,
+                duration: 0.045
+            },
+
+            {
+                type: "square",
+                start: 155,
+                end: 95,
+                duration: 0.050
+            },
+
+            {
+                type: "sawtooth",
+                start: 190,
+                end: 105,
+                duration: 0.042
+            },
+
+            {
+                type: "square",
+                start: 85,
+                end: 58,
+                duration: 0.055
+            },
+
+            {
+                type: "triangle",
+                start: 220,
+                end: 120,
+                duration: 0.040
+            }
+
+        ];
+
+
+        const sound =
+            sounds[
+                Math.floor(
+                    Math.random() *
+                    sounds.length
+                )
+            ];
+
+
+        const master =
+            ctx.createGain();
+
+
+        /*
+         * Web-audio output at full app level.
+         * Phone's own volume still controls
+         * the final loudness.
+         */
+
+        master.gain.setValueAtTime(
+            0.9,
+            now
+        );
+
+
+        master.connect(
+            ctx.destination
+        );
+
+
+        const oscillator =
+            ctx.createOscillator();
+
+
+        const gain =
+            ctx.createGain();
+
+
+        oscillator.type =
+            sound.type;
+
+
+        oscillator.frequency.setValueAtTime(
+            sound.start,
+            now
+        );
+
+
+        oscillator.frequency
+            .exponentialRampToValueAtTime(
+                sound.end,
+                now + sound.duration
+            );
+
+
+        gain.gain.setValueAtTime(
+            0.0001,
+            now
+        );
+
+
+        gain.gain
+            .exponentialRampToValueAtTime(
+                0.50,
+                now + 0.003
+            );
+
+
+        gain.gain
+            .exponentialRampToValueAtTime(
+                0.0001,
+                now + sound.duration
+            );
+
+
+        oscillator.connect(
+            gain
+        );
+
+
+        gain.connect(
+            master
+        );
+
+
+        oscillator.start(
+            now
+        );
+
+
+        oscillator.stop(
+            now +
+            sound.duration +
+            0.01
+        );
+
+
+    } catch (error) {
+
+        console.warn(
+            "Typing sound error:",
+            error
+        );
+    }
+}
+
+
+/* =========================================================
+   ONLY TEXT TYPING GETS THE SOUND
+   Buttons do NOT make this sound.
+   ========================================================= */
+
+function isTypingField(
+    element
+) {
+
+    if (!element) {
+        return false;
+    }
+
+
+    return (
+        element.tagName === "INPUT" ||
+        element.tagName === "TEXTAREA" ||
+        element.isContentEditable
+    );
+}
+
+
+/* =========================================================
+   KEYBOARD LISTENER
+   ========================================================= */
+
+document.addEventListener(
+    "keydown",
+    (event) => {
+
+        if (
+            !isTypingField(
+                event.target
+            )
+        ) {
+            return;
+        }
+
+
+        const ignoredKeys = [
+
+            "Shift",
+            "Control",
+            "Alt",
+            "Meta",
+
+            "CapsLock",
+            "Tab",
+            "Escape",
+
+            "ArrowUp",
+            "ArrowDown",
+            "ArrowLeft",
+            "ArrowRight",
+
+            "Home",
+            "End",
+
+            "PageUp",
+            "PageDown",
+
+            "Insert",
+            "Delete"
+
+        ];
+
+
+        if (
+            ignoredKeys.includes(
+                event.key
+            )
+        ) {
+            return;
+        }
+
+
+        /*
+         * Prevent overlapping sounds
+         * when keyboard repeats extremely fast.
+         */
+
+        const now =
+            performance.now();
+
+
+        if (
+            now -
+            hackerLastKeyTime <
+            18
+        ) {
+            return;
+        }
+
+
+        hackerLastKeyTime =
+            now;
+
+
+        playHackerTypingSound();
+
+    },
+    {
+        passive: true
+    }
+);
+
+
+/* =========================================================
+   MOBILE BROWSER AUDIO UNLOCK
+   First touch unlocks audio.
+   It does NOT play a sound.
+   ========================================================= */
+
+document.addEventListener(
+    "pointerdown",
+    () => {
+
+        unlockHackerAudio();
+
+    },
+    {
+        passive: true,
+        once: true
+    }
+);
 
 const socket = io();
 
