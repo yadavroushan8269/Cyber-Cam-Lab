@@ -16,7 +16,7 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 10000;
 
-// Maximum users allowed in one call room
+// Cyber-Cam-Lab: maximum 6 users in one room
 const MAX_USERS_PER_ROOM = 6;
 
 // roomId -> Set(socketId)
@@ -31,14 +31,17 @@ const socketUsers = new Map();
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// Serve public folder
+// Serve frontend
 app.use(express.static(path.join(__dirname, "public")));
 
-// Health check
+// --------------------------------------------------
+// HEALTH
+// --------------------------------------------------
+
 app.get("/health", (req, res) => {
   res.json({
     ok: true,
-    service: "Cyber Map Viewer",
+    service: "Cyber-Cam-Lab",
     users: io.engine.clientsCount,
     rooms: rooms.size,
     maxUsersPerRoom: MAX_USERS_PER_ROOM,
@@ -46,9 +49,14 @@ app.get("/health", (req, res) => {
   });
 });
 
-// SPA fallback
+// --------------------------------------------------
+// FRONTEND FALLBACK
+// --------------------------------------------------
+
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(
+    path.join(__dirname, "public", "index.html")
+  );
 });
 
 // --------------------------------------------------
@@ -79,26 +87,6 @@ function getRoomUsers(roomId) {
     .filter(Boolean);
 }
 
-function removeSocketFromRoom(socketId) {
-  const roomId = socketRooms.get(socketId);
-
-  if (!roomId) return null;
-
-  const room = rooms.get(roomId);
-
-  if (room) {
-    room.delete(socketId);
-
-    if (room.size === 0) {
-      rooms.delete(roomId);
-    }
-  }
-
-  socketRooms.delete(socketId);
-
-  return roomId;
-}
-
 function leaveCurrentRoom(socket) {
   const roomId = socketRooms.get(socket.id);
 
@@ -125,7 +113,6 @@ function leaveCurrentRoom(socket) {
   }
 
   socket.leave(roomId);
-
   socketRooms.delete(socket.id);
 }
 
@@ -146,7 +133,8 @@ io.on("connection", socket => {
   // ------------------------------------------------
 
   socket.on("set-user-info", data => {
-    const current = socketUsers.get(socket.id) || {};
+    const current =
+      socketUsers.get(socket.id) || {};
 
     socketUsers.set(socket.id, {
       ...current,
@@ -178,21 +166,19 @@ io.on("connection", socket => {
       socket.emit("room-error", {
         message: "Room ID required"
       });
-
       return;
     }
 
-    // Already inside same room
+    // Already in this room
     if (socketRooms.get(socket.id) === roomId) {
       socket.emit("room-joined", {
         roomId,
         users: getRoomUsers(roomId)
       });
-
       return;
     }
 
-    // Leave previous room first
+    // Leave old room
     leaveCurrentRoom(socket);
 
     if (!rooms.has(roomId)) {
@@ -207,17 +193,14 @@ io.on("connection", socket => {
         roomId,
         maxUsers: MAX_USERS_PER_ROOM
       });
-
       return;
     }
 
     socket.join(roomId);
-
     room.add(socket.id);
 
     socketRooms.set(socket.id, roomId);
 
-    // Save room to user information
     const currentUser =
       socketUsers.get(socket.id) || {};
 
@@ -227,23 +210,24 @@ io.on("connection", socket => {
     });
 
     console.log(
-      `JOIN ROOM: ${socket.id} -> ${roomId} (${room.size}/${MAX_USERS_PER_ROOM})`
+      `JOIN ROOM: ${socket.id} -> ${roomId} ` +
+      `(${room.size}/${MAX_USERS_PER_ROOM})`
     );
 
-    // Tell joining user
+    // Joining user
     socket.emit("room-joined", {
       roomId,
       users: getRoomUsers(roomId)
     });
 
-    // Tell existing users
+    // Existing users
     socket.to(roomId).emit("peer-joined", {
       socketId: socket.id,
       roomId,
       user: socketUsers.get(socket.id)
     });
 
-    // Update everyone
+    // Everyone
     io.to(roomId).emit("room-users", {
       roomId,
       users: getRoomUsers(roomId)
@@ -263,16 +247,16 @@ io.on("connection", socket => {
 
     if (!targetRoom) {
       socket.emit("call-unavailable", {
-        roomId: targetRoom,
+        roomId: "",
         reason: "INVALID_ROOM"
       });
-
       return;
     }
 
-    const targetSockets = rooms.get(targetRoom);
+    const targetSockets =
+      rooms.get(targetRoom);
 
-    // Target room/user offline
+    // User offline
     if (
       !targetSockets ||
       targetSockets.size === 0
@@ -281,7 +265,6 @@ io.on("connection", socket => {
         roomId: targetRoom,
         reason: "OFFLINE"
       });
-
       return;
     }
 
@@ -295,7 +278,7 @@ io.on("connection", socket => {
       `CALL: ${socket.id} -> ROOM ${targetRoom}`
     );
 
-    // Ring everyone currently inside target room
+    // Ring target room
     for (const targetSocketId of targetSockets) {
       if (targetSocketId === socket.id) {
         continue;
@@ -306,11 +289,8 @@ io.on("connection", socket => {
         {
           callerId: socket.id,
           callerSocketId: socket.id,
-
           callerRoom,
-
           targetRoom,
-
           displayName:
             callerUser.displayName || "USER"
         }
@@ -340,7 +320,6 @@ io.on("connection", socket => {
       socket.emit("call-unavailable", {
         reason: "CALLER_OFFLINE"
       });
-
       return;
     }
 
@@ -354,7 +333,7 @@ io.on("connection", socket => {
       `CALL ACCEPTED: ${socket.id} <- ${callerId}`
     );
 
-    // Notify caller
+    // Caller
     io.to(callerId).emit(
       "call-accepted",
       {
@@ -363,7 +342,7 @@ io.on("connection", socket => {
       }
     );
 
-    // Notify receiver
+    // Receiver
     socket.emit(
       "call-accepted",
       {
@@ -399,7 +378,7 @@ io.on("connection", socket => {
   });
 
   // ------------------------------------------------
-  // WEBRTC SIGNALING
+  // WEBRTC SIGNAL
   // ------------------------------------------------
 
   socket.on("webrtc-signal", data => {
@@ -419,9 +398,7 @@ io.on("connection", socket => {
       "webrtc-signal",
       {
         ...data,
-
         from: socket.id,
-
         senderId: socket.id
       }
     );
@@ -476,7 +453,7 @@ io.on("connection", socket => {
   });
 
   // ------------------------------------------------
-  // CALL ROOM CHAT
+  // CALL CHAT
   // ------------------------------------------------
 
   socket.on("call-room-message", data => {
@@ -494,15 +471,11 @@ io.on("connection", socket => {
 
     const payload = {
       roomId,
-
       senderId: socket.id,
-
       senderName:
         user.displayName || "USER",
-
       message:
         message.slice(0, 2000),
-
       timestamp: Date.now()
     };
 
@@ -535,28 +508,21 @@ io.on("connection", socket => {
 
     const payload = {
       roomId: targetRoom,
-
       senderId: socket.id,
-
       senderName:
         sender.displayName || "USER",
-
       message:
         message.slice(0, 4000),
-
       mediaUrl:
         data?.mediaUrl || null,
-
       mediaType:
         data?.mediaType || null,
-
       timestamp: Date.now()
     };
 
     const targetSockets =
       rooms.get(targetRoom);
 
-    // Target offline
     if (
       !targetSockets ||
       targetSockets.size === 0
@@ -572,7 +538,6 @@ io.on("connection", socket => {
       return;
     }
 
-    // Send message to target room
     for (const targetSocketId of targetSockets) {
       io.to(targetSocketId).emit(
         "room-chat",
@@ -580,7 +545,6 @@ io.on("connection", socket => {
       );
     }
 
-    // Also return to sender
     socket.emit(
       "room-chat",
       payload
@@ -624,7 +588,6 @@ io.on("connection", socket => {
       if (room) {
         room.delete(socket.id);
 
-        // Tell remaining users
         socket.to(roomId).emit(
           "peer-left",
           {
@@ -664,39 +627,21 @@ server.listen(
     console.log(
       "======================================"
     );
-
     console.log(
-      "      CYBER MAP VIEWER SERVER"
+      "          CYBER-CAM-LAB"
     );
-
     console.log(
       "======================================"
     );
-
-    console.log(
-      `PORT: ${PORT}`
-    );
-
+    console.log(`PORT: ${PORT}`);
     console.log(
       `MAX USERS / ROOM: ${MAX_USERS_PER_ROOM}`
     );
-
-    console.log(
-      "Socket.IO: ONLINE"
-    );
-
-    console.log(
-      "WebRTC signaling: ONLINE"
-    );
-
-    console.log(
-      "Room chat: ONLINE"
-    );
-
-    console.log(
-      "Group calling: ONLINE"
-    );
-
+    console.log("Socket.IO: ONLINE");
+    console.log("WebRTC signaling: ONLINE");
+    console.log("Room calling: ONLINE");
+    console.log("Room chat: ONLINE");
+    console.log("Group calling: ONLINE");
     console.log(
       "======================================"
     );
