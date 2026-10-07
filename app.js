@@ -1,7 +1,6 @@
 /* =========================================================
    JH SECURE CAM
    FINAL APP.JS
-   HACKER SOUND EDITION
 ========================================================= */
 
 "use strict";
@@ -10,336 +9,6 @@
 /* =========================================================
    SOCKET
 ========================================================= */
-/* =========================================================
-   JH SECURE CAM — REAL HACKER TYPING SOUND
-   ========================================================= */
-
-let hackerAudioContext = null;
-let hackerLastKeyTime = 0;
-
-function unlockHackerAudio() {
-    try {
-        const AudioCtx =
-            window.AudioContext ||
-            window.webkitAudioContext;
-
-        if (!AudioCtx) return;
-
-        if (!hackerAudioContext) {
-            hackerAudioContext = new AudioCtx();
-        }
-
-        if (
-            hackerAudioContext.state === "suspended"
-        ) {
-            hackerAudioContext
-                .resume()
-                .catch(() => {});
-        }
-
-    } catch (error) {
-        console.warn(
-            "Hacker audio unavailable:",
-            error
-        );
-    }
-}
-
-
-function playHackerTypingSound() {
-
-    unlockHackerAudio();
-
-    if (!hackerAudioContext) {
-        return;
-    }
-
-    try {
-
-        const ctx =
-            hackerAudioContext;
-
-        const now =
-            ctx.currentTime;
-
-
-        /*
-         * Different frequencies make every
-         * key sound slightly different.
-         */
-
-        const sounds = [
-
-            {
-                type: "square",
-                start: 115,
-                end: 72,
-                duration: 0.045
-            },
-
-            {
-                type: "square",
-                start: 155,
-                end: 95,
-                duration: 0.050
-            },
-
-            {
-                type: "sawtooth",
-                start: 190,
-                end: 105,
-                duration: 0.042
-            },
-
-            {
-                type: "square",
-                start: 85,
-                end: 58,
-                duration: 0.055
-            },
-
-            {
-                type: "triangle",
-                start: 220,
-                end: 120,
-                duration: 0.040
-            }
-
-        ];
-
-
-        const sound =
-            sounds[
-                Math.floor(
-                    Math.random() *
-                    sounds.length
-                )
-            ];
-
-
-        const master =
-            ctx.createGain();
-
-
-        /*
-         * Web-audio output at full app level.
-         * Phone's own volume still controls
-         * the final loudness.
-         */
-
-        master.gain.setValueAtTime(
-            0.9,
-            now
-        );
-
-
-        master.connect(
-            ctx.destination
-        );
-
-
-        const oscillator =
-            ctx.createOscillator();
-
-
-        const gain =
-            ctx.createGain();
-
-
-        oscillator.type =
-            sound.type;
-
-
-        oscillator.frequency.setValueAtTime(
-            sound.start,
-            now
-        );
-
-
-        oscillator.frequency
-            .exponentialRampToValueAtTime(
-                sound.end,
-                now + sound.duration
-            );
-
-
-        gain.gain.setValueAtTime(
-            0.0001,
-            now
-        );
-
-
-        gain.gain
-            .exponentialRampToValueAtTime(
-                0.50,
-                now + 0.003
-            );
-
-
-        gain.gain
-            .exponentialRampToValueAtTime(
-                0.0001,
-                now + sound.duration
-            );
-
-
-        oscillator.connect(
-            gain
-        );
-
-
-        gain.connect(
-            master
-        );
-
-
-        oscillator.start(
-            now
-        );
-
-
-        oscillator.stop(
-            now +
-            sound.duration +
-            0.01
-        );
-
-
-    } catch (error) {
-
-        console.warn(
-            "Typing sound error:",
-            error
-        );
-    }
-}
-
-
-/* =========================================================
-   ONLY TEXT TYPING GETS THE SOUND
-   Buttons do NOT make this sound.
-   ========================================================= */
-
-function isTypingField(
-    element
-) {
-
-    if (!element) {
-        return false;
-    }
-
-
-    return (
-        element.tagName === "INPUT" ||
-        element.tagName === "TEXTAREA" ||
-        element.isContentEditable
-    );
-}
-
-
-/* =========================================================
-   KEYBOARD LISTENER
-   ========================================================= */
-
-document.addEventListener(
-    "keydown",
-    (event) => {
-
-        if (
-            !isTypingField(
-                event.target
-            )
-        ) {
-            return;
-        }
-
-
-        const ignoredKeys = [
-
-            "Shift",
-            "Control",
-            "Alt",
-            "Meta",
-
-            "CapsLock",
-            "Tab",
-            "Escape",
-
-            "ArrowUp",
-            "ArrowDown",
-            "ArrowLeft",
-            "ArrowRight",
-
-            "Home",
-            "End",
-
-            "PageUp",
-            "PageDown",
-
-            "Insert",
-            "Delete"
-
-        ];
-
-
-        if (
-            ignoredKeys.includes(
-                event.key
-            )
-        ) {
-            return;
-        }
-
-
-        /*
-         * Prevent overlapping sounds
-         * when keyboard repeats extremely fast.
-         */
-
-        const now =
-            performance.now();
-
-
-        if (
-            now -
-            hackerLastKeyTime <
-            18
-        ) {
-            return;
-        }
-
-
-        hackerLastKeyTime =
-            now;
-
-
-        playHackerTypingSound();
-
-    },
-    {
-        passive: true
-    }
-);
-
-
-/* =========================================================
-   MOBILE BROWSER AUDIO UNLOCK
-   First touch unlocks audio.
-   It does NOT play a sound.
-   ========================================================= */
-
-document.addEventListener(
-    "pointerdown",
-    () => {
-
-        unlockHackerAudio();
-
-    },
-    {
-        passive: true,
-        once: true
-    }
-);
 
 const socket = io();
 
@@ -349,6 +18,7 @@ const socket = io();
 ========================================================= */
 
 const MAX_FRIENDS = 6;
+
 const MAX_MEDIA_MB = 25;
 
 const STORAGE_ROOM =
@@ -423,346 +93,10 @@ const peers = {};
 const peerTiles = {};
 
 
-/* =========================================================
-   HACKER SOUND SYSTEM
-========================================================= */
-
-let hackerAudioContext = null;
-
-
 /*
- * Create / unlock AudioContext.
- *
- * Browser audio starts after user interaction.
+ * peerId -> media transfer
  */
-function getHackerAudio() {
-
-    if (!hackerAudioContext) {
-
-        const AudioCtx =
-            window.AudioContext ||
-            window.webkitAudioContext;
-
-        if (!AudioCtx) {
-            return null;
-        }
-
-        hackerAudioContext =
-            new AudioCtx();
-    }
-
-
-    if (
-        hackerAudioContext.state ===
-        "suspended"
-    ) {
-
-        hackerAudioContext
-            .resume()
-            .catch(
-                () => {}
-            );
-    }
-
-
-    return hackerAudioContext;
-}
-
-
-/*
- * Hacker-style synthetic sound.
- *
- * No external MP3 required.
- */
-function hackerBeep(
-    type = "click"
-) {
-
-    const ctx =
-        getHackerAudio();
-
-    if (!ctx) {
-        return;
-    }
-
-
-    const now =
-        ctx.currentTime;
-
-
-    const oscillator =
-        ctx.createOscillator();
-
-    const gain =
-        ctx.createGain();
-
-    const filter =
-        ctx.createBiquadFilter();
-
-
-    oscillator.connect(
-        filter
-    );
-
-    filter.connect(
-        gain
-    );
-
-    gain.connect(
-        ctx.destination
-    );
-
-
-    filter.type =
-        "highpass";
-
-    filter.frequency.value =
-        300;
-
-
-    gain.gain.setValueAtTime(
-        0.0001,
-        now
-    );
-
-
-    /*
-     * NORMAL CLICK
-     */
-
-    if (
-        type === "click"
-    ) {
-
-        oscillator.type =
-            "square";
-
-
-        oscillator.frequency.setValueAtTime(
-            850,
-            now
-        );
-
-
-        oscillator.frequency.exponentialRampToValueAtTime(
-            1250,
-            now + 0.055
-        );
-
-
-        gain.gain.exponentialRampToValueAtTime(
-            0.9,
-            now + 0.008
-        );
-
-
-        gain.gain.exponentialRampToValueAtTime(
-            0.0001,
-            now + 0.13
-        );
-
-
-        oscillator.start(
-            now
-        );
-
-        oscillator.stop(
-            now + 0.14
-        );
-
-        return;
-    }
-
-
-    /*
-     * ACTION
-     */
-
-    if (
-        type === "action"
-    ) {
-
-        oscillator.type =
-            "sawtooth";
-
-
-        oscillator.frequency.setValueAtTime(
-            420,
-            now
-        );
-
-
-        oscillator.frequency.exponentialRampToValueAtTime(
-            1100,
-            now + 0.12
-        );
-
-
-        gain.gain.exponentialRampToValueAtTime(
-            0.85,
-            now + 0.01
-        );
-
-
-        gain.gain.exponentialRampToValueAtTime(
-            0.0001,
-            now + 0.22
-        );
-
-
-        oscillator.start(
-            now
-        );
-
-        oscillator.stop(
-            now + 0.23
-        );
-
-        return;
-    }
-
-
-    /*
-     * INCOMING CALL ALERT
-     */
-
-    if (
-        type === "alert"
-    ) {
-
-        oscillator.type =
-            "square";
-
-
-        oscillator.frequency.setValueAtTime(
-            520,
-            now
-        );
-
-        oscillator.frequency.setValueAtTime(
-            900,
-            now + 0.10
-        );
-
-        oscillator.frequency.setValueAtTime(
-            520,
-            now + 0.20
-        );
-
-        oscillator.frequency.setValueAtTime(
-            900,
-            now + 0.30
-        );
-
-
-        gain.gain.exponentialRampToValueAtTime(
-            0.95,
-            now + 0.01
-        );
-
-
-        gain.gain.exponentialRampToValueAtTime(
-            0.0001,
-            now + 0.43
-        );
-
-
-        oscillator.start(
-            now
-        );
-
-        oscillator.stop(
-            now + 0.44
-        );
-
-        return;
-    }
-
-
-    /*
-     * SHUTDOWN / END
-     */
-
-    if (
-        type === "shutdown"
-    ) {
-
-        oscillator.type =
-            "sawtooth";
-
-
-        oscillator.frequency.setValueAtTime(
-            1000,
-            now
-        );
-
-
-        oscillator.frequency.exponentialRampToValueAtTime(
-            180,
-            now + 0.28
-        );
-
-
-        gain.gain.exponentialRampToValueAtTime(
-            0.9,
-            now + 0.01
-        );
-
-
-        gain.gain.exponentialRampToValueAtTime(
-            0.0001,
-            now + 0.31
-        );
-
-
-        oscillator.start(
-            now
-        );
-
-        oscillator.stop(
-            now + 0.32
-        );
-
-        return;
-    }
-}
-
-
-/*
- * Every clickable button gets hacker click.
- */
-document.addEventListener(
-    "click",
-    event => {
-
-        const target =
-            event.target.closest(
-                "button, .filter-option, .friend-item"
-            );
-
-
-        if (!target) {
-            return;
-        }
-
-
-        /*
-         * These have their own sounds.
-         */
-        if (
-            target === acceptCallBtn ||
-            target === rejectCallBtn
-        ) {
-            return;
-        }
-
-
-        hackerBeep(
-            "click"
-        );
-    },
-    true
-);
+const incomingTransfers = {};
 
 
 /* =========================================================
@@ -1049,7 +383,6 @@ const chatMediaCancelBtn =
 ========================================================= */
 
 if (!localVideo) {
-
     console.error(
         "JH Secure Cam: localVideo missing."
     );
@@ -1060,16 +393,12 @@ if (!localVideo) {
    STATUS
 ========================================================= */
 
-function setStatus(
-    message
-) {
+function setStatus(message) {
 
     if (status) {
-
         status.textContent =
             message;
     }
-
 
     console.log(
         "[STATUS]",
@@ -1087,23 +416,18 @@ socket.on(
     () => {
 
         if (connectionState) {
-
             connectionState.textContent =
                 "ONLINE";
         }
 
-
         if (connectionDot) {
-
             connectionDot.style.color =
                 "#00ff66";
         }
 
-
         setStatus(
             "Secure server connected."
         );
-
 
         updateOnlineCount();
     }
@@ -1115,18 +439,14 @@ socket.on(
     () => {
 
         if (connectionState) {
-
             connectionState.textContent =
                 "OFFLINE";
         }
 
-
         if (connectionDot) {
-
             connectionDot.style.color =
                 "#ff304f";
         }
-
 
         setStatus(
             "Server connection lost."
@@ -1144,10 +464,7 @@ function generateRoomCode() {
     const chars =
         "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-
-    let result =
-        "";
-
+    let result = "";
 
     for (
         let i = 0;
@@ -1164,7 +481,6 @@ function generateRoomCode() {
             ];
     }
 
-
     return result;
 }
 
@@ -1176,19 +492,16 @@ function getPermanentRoomCode() {
             STORAGE_ROOM
         );
 
-
     if (!saved) {
 
         saved =
             generateRoomCode();
-
 
         localStorage.setItem(
             STORAGE_ROOM,
             saved
         );
     }
-
 
     return saved
         .trim()
@@ -1201,20 +514,15 @@ function showPermanentRoom() {
     roomCode =
         getPermanentRoomCode();
 
-
     if (roomInput) {
-
         roomInput.value =
             roomCode;
-
 
         roomInput.readOnly =
             true;
     }
 
-
     if (myRoomValue) {
-
         myRoomValue.textContent =
             roomCode;
     }
@@ -1233,15 +541,12 @@ function joinOwnRoom() {
     roomCode =
         getPermanentRoomCode();
 
-
     socket.emit(
         "join-room",
         {
-            room:
-                roomCode
+            room: roomCode
         }
     );
-
 
     setStatus(
         "Joining your permanent room..."
@@ -1261,23 +566,17 @@ socket.on(
             data?.room ||
             roomCode;
 
-
         const users =
-            Array.isArray(
-                data?.users
-            )
+            Array.isArray(data?.users)
                 ? data.users
                 : [];
-
 
         roomCode =
             room
                 .trim()
                 .toUpperCase();
 
-
         if (roomInput) {
-
             roomInput.value =
                 roomCode;
 
@@ -1285,34 +584,34 @@ socket.on(
                 true;
         }
 
-
         if (myRoomValue) {
-
             myRoomValue.textContent =
                 getPermanentRoomCode();
         }
 
-
         activeCall =
             true;
-
 
         updateOnlineCount(
             data?.count
         );
 
-
         setStatus(
             `Room connected (${data?.count || 1}/6)`
         );
 
-
+        /*
+         * Start camera automatically
+         * when entering room.
+         */
         if (!localStream) {
-
             await startCamera();
         }
 
-
+        /*
+         * Existing users:
+         * create offer.
+         */
         for (
             const peerId of users
         ) {
@@ -1324,38 +623,11 @@ socket.on(
                 continue;
             }
 
-
             await createPeer(
                 peerId,
                 true
             );
         }
-    }
-);
-
-
-/* =========================================================
-   ROOM FULL
-========================================================= */
-
-socket.on(
-    "room-full",
-    data => {
-
-        hackerBeep(
-            "shutdown"
-        );
-
-
-        setStatus(
-            "Room is full."
-        );
-
-
-        alert(
-            data?.message ||
-            "Room full hai. Maximum 6 users allowed."
-        );
     }
 );
 
@@ -1374,13 +646,16 @@ socket.on(
             return;
         }
 
-
         updateOnlineCount();
-
 
         setStatus(
             "New user joined the camera network."
         );
+
+        /*
+         * The new user will receive
+         * offers from existing users.
+         */
     }
 );
 
@@ -1399,14 +674,11 @@ socket.on(
             return;
         }
 
-
         closePeer(
             peerId
         );
 
-
         updateOnlineCount();
-
 
         setStatus(
             "A user left the room."
@@ -1428,29 +700,23 @@ async function createPeer(
         return null;
     }
 
-
     if (
         peers[peerId]
     ) {
-
-        return peers[
-            peerId
-        ];
+        return peers[peerId];
     }
-
 
     const pc =
         new RTCPeerConnection(
             rtcConfig
         );
 
-
     peers[peerId] =
         pc;
 
 
     /*
-     * Local tracks.
+     * Add local tracks.
      */
 
     if (localStream) {
@@ -1470,7 +736,7 @@ async function createPeer(
 
 
     /*
-     * ICE.
+     * ICE candidates.
      */
 
     pc.onicecandidate =
@@ -1509,17 +775,14 @@ async function createPeer(
             const stream =
                 event.streams?.[0];
 
-
             if (!stream) {
                 return;
             }
-
 
             attachRemoteStream(
                 peerId,
                 stream
             );
-
 
             updateOnlineCount();
         };
@@ -1538,21 +801,36 @@ async function createPeer(
                 pc.connectionState
             );
 
-
             if (
                 pc.connectionState ===
-                    "closed"
+                    "failed" ||
+                pc.connectionState ===
+                    "closed" ||
+                pc.connectionState ===
+                    "disconnected"
             ) {
 
-                closePeer(
-                    peerId
-                );
+                /*
+                 * Don't immediately delete
+                 * disconnected peer because
+                 * mobile networks can recover.
+                 */
+
+                if (
+                    pc.connectionState ===
+                    "closed"
+                ) {
+
+                    closePeer(
+                        peerId
+                    );
+                }
             }
         };
 
 
     /*
-     * Create offer.
+     * Offer.
      */
 
     if (createOffer) {
@@ -1562,11 +840,9 @@ async function createPeer(
             const offer =
                 await pc.createOffer();
 
-
             await pc.setLocalDescription(
                 offer
             );
-
 
             socket.emit(
                 "signal",
@@ -1587,7 +863,6 @@ async function createPeer(
             );
         }
     }
-
 
     return pc;
 }
@@ -1611,20 +886,16 @@ socket.on(
             return;
         }
 
-
         try {
 
             let pc =
                 peers[sender];
 
-
             if (!pc) {
 
                 if (!localStream) {
-
                     await startCamera();
                 }
-
 
                 pc =
                     await createPeer(
@@ -1649,15 +920,12 @@ socket.on(
                     )
                 );
 
-
                 const answer =
                     await pc.createAnswer();
-
 
                 await pc.setLocalDescription(
                     answer
                 );
-
 
                 socket.emit(
                     "signal",
@@ -1669,7 +937,6 @@ socket.on(
                             pc.localDescription
                     }
                 );
-
 
                 setStatus(
                     "Video connection negotiating..."
@@ -1691,7 +958,6 @@ socket.on(
                         data
                     )
                 );
-
 
                 setStatus(
                     "Video connection established."
@@ -1813,18 +1079,15 @@ function getRemoteSlot(
                 slot
             );
 
-
         if (!occupied) {
 
             peerTiles[
                 peerId
             ] = slot;
 
-
             return slot;
         }
     }
-
 
     return null;
 }
@@ -1840,7 +1103,6 @@ function attachRemoteStream(
             peerId
         );
 
-
     if (!slot) {
 
         console.warn(
@@ -1851,19 +1113,15 @@ function attachRemoteStream(
         return;
     }
 
-
     slot.video.srcObject =
         stream;
-
 
     slot.video.muted =
         false;
 
-
     slot.tile.classList.remove(
         "empty"
     );
-
 
     slot.video
         .play()
@@ -1882,20 +1140,16 @@ function releaseRemoteSlot(
             peerId
         ];
 
-
     if (!slot) {
         return;
     }
 
-
     slot.video.srcObject =
         null;
-
 
     slot.tile.classList.add(
         "empty"
     );
-
 
     delete peerTiles[
         peerId
@@ -1914,21 +1168,16 @@ function closePeer(
     const pc =
         peers[peerId];
 
-
     if (pc) {
 
         try {
-
             pc.close();
-
         } catch {}
-        
 
         delete peers[
             peerId
         ];
     }
-
 
     releaseRemoteSlot(
         peerId
@@ -1949,11 +1198,8 @@ function updateOnlineCount(
             suppliedCount
         );
 
-
     if (
-        !Number.isFinite(
-            count
-        ) ||
+        !Number.isFinite(count) ||
         count <= 0
     ) {
 
@@ -1963,7 +1209,6 @@ function updateOnlineCount(
             ).length + 1;
     }
 
-
     count =
         Math.max(
             1,
@@ -1972,7 +1217,6 @@ function updateOnlineCount(
                 count
             )
         );
-
 
     if (onlineCount) {
 
@@ -1993,32 +1237,26 @@ async function startCamera() {
         const oldStream =
             localStream;
 
-
         const newStream =
             await navigator
                 .mediaDevices
                 .getUserMedia({
-
                     video: {
-
                         facingMode: {
                             ideal:
                                 currentFacingMode
                         },
 
                         width: {
-                            ideal:
-                                1280
+                            ideal: 1280
                         },
 
                         height: {
-                            ideal:
-                                720
+                            ideal: 720
                         }
                     },
 
-                    audio:
-                        true
+                    audio: true
                 });
 
 
@@ -2029,28 +1267,26 @@ async function startCamera() {
         localVideo.srcObject =
             localStream;
 
-
         localVideo.muted =
             true;
-
 
         localVideo.playsInline =
             true;
 
 
+        /*
+         * Replace tracks inside
+         * every existing peer.
+         */
+
         const videoTrack =
             localStream
                 .getVideoTracks()[0];
-
 
         const audioTrack =
             localStream
                 .getAudioTracks()[0];
 
-
-        /*
-         * Replace tracks.
-         */
 
         for (
             const peerId in peers
@@ -2058,7 +1294,6 @@ async function startCamera() {
 
             const pc =
                 peers[peerId];
-
 
             if (!pc) {
                 continue;
@@ -2088,7 +1323,9 @@ async function startCamera() {
                             videoTrack
                         );
 
-                } catch (error) {
+                } catch (
+                    error
+                ) {
 
                     console.warn(
                         "Video replace error:",
@@ -2121,7 +1358,9 @@ async function startCamera() {
                             audioTrack
                         );
 
-                } catch (error) {
+                } catch (
+                    error
+                ) {
 
                     console.warn(
                         "Audio replace error:",
@@ -2133,7 +1372,7 @@ async function startCamera() {
 
 
         /*
-         * Preserve mute.
+         * Preserve mute state.
          */
 
         if (audioTrack) {
@@ -2144,7 +1383,7 @@ async function startCamera() {
 
 
         /*
-         * Stop old stream.
+         * Stop old tracks.
          */
 
         if (oldStream) {
@@ -2162,15 +1401,12 @@ async function startCamera() {
 
         applyFilter();
 
-
         localTile.classList.remove(
             "empty"
         );
 
-
         cameraBtn.textContent =
             "📷 Camera ON";
-
 
         setStatus(
             currentFacingMode ===
@@ -2178,7 +1414,6 @@ async function startCamera() {
                 ? "Back camera active."
                 : "Front camera active."
         );
-
 
         await localVideo
             .play()
@@ -2193,11 +1428,9 @@ async function startCamera() {
             error
         );
 
-
         setStatus(
             "Camera permission/device error."
         );
-
 
         alert(
             "Camera start nahi hua.\n\n" +
@@ -2217,11 +1450,6 @@ if (cameraBtn) {
         "click",
         async () => {
 
-            hackerBeep(
-                "action"
-            );
-
-
             if (
                 localStream
             ) {
@@ -2230,27 +1458,22 @@ if (cameraBtn) {
                     localStream
                         .getVideoTracks();
 
-
                 if (tracks.length) {
 
                     const enabled =
                         !tracks[0].enabled;
 
-
                     tracks.forEach(
                         track => {
-
                             track.enabled =
                                 enabled;
                         }
                     );
 
-
                     cameraBtn.textContent =
                         enabled
                             ? "📷 Camera ON"
                             : "📷 Camera OFF";
-
 
                     setStatus(
                         enabled
@@ -2258,11 +1481,9 @@ if (cameraBtn) {
                             : "Camera disabled."
                     );
 
-
                     return;
                 }
             }
-
 
             await startCamera();
         }
@@ -2279,11 +1500,6 @@ if (switchCameraBtn) {
     switchCameraBtn.addEventListener(
         "click",
         async () => {
-
-            hackerBeep(
-                "action"
-            );
-
 
             if (
                 !navigator.mediaDevices ||
@@ -2327,7 +1543,6 @@ if (switchCameraBtn) {
                         ? "environment"
                         : "user";
 
-
                 console.error(
                     error
                 );
@@ -2347,7 +1562,6 @@ function applyMirror() {
         return;
     }
 
-
     localVideo.classList.toggle(
         "mirrored",
         isMirrored
@@ -2361,23 +1575,15 @@ if (mirrorBtn) {
         "click",
         () => {
 
-            hackerBeep(
-                "action"
-            );
-
-
             isMirrored =
                 !isMirrored;
 
-
             applyMirror();
-
 
             mirrorBtn.classList.toggle(
                 "active",
                 isMirrored
             );
-
 
             mirrorBtn.textContent =
                 isMirrored
@@ -2398,7 +1604,6 @@ function applyFilter() {
         return;
     }
 
-
     localVideo.classList.remove(
         "filter-none",
         "filter-vibrant",
@@ -2411,7 +1616,6 @@ function applyFilter() {
         "filter-soft",
         "filter-contrast"
     );
-
 
     localVideo.classList.add(
         `filter-${currentFilter}`
@@ -2426,15 +1630,9 @@ filterOptions.forEach(
             "click",
             () => {
 
-                hackerBeep(
-                    "action"
-                );
-
-
                 currentFilter =
                     button.dataset.filter ||
                     "none";
-
 
                 filterOptions.forEach(
                     item => {
@@ -2446,9 +1644,7 @@ filterOptions.forEach(
                     }
                 );
 
-
                 applyFilter();
-
 
                 setStatus(
                     currentFilter ===
@@ -2456,7 +1652,6 @@ filterOptions.forEach(
                         ? "Camera filter cleared."
                         : `Filter: ${currentFilter.toUpperCase()}`
                 );
-
 
                 closeOverlay(
                     filterOverlay
@@ -2504,11 +1699,6 @@ if (micBtn) {
     micBtn.addEventListener(
         "click",
         () => {
-
-            hackerBeep(
-                "action"
-            );
-
 
             if (!localStream) {
 
@@ -2578,17 +1768,12 @@ if (endBtn) {
 
 function endCall() {
 
-    hackerBeep(
-        "shutdown"
-    );
-
-
     activeCall =
         false;
 
 
     /*
-     * Close peers.
+     * Close WebRTC peers.
      */
 
     Object.keys(
@@ -2604,7 +1789,7 @@ function endCall() {
 
 
     /*
-     * Stop camera.
+     * Stop local camera.
      */
 
     if (localStream) {
@@ -2616,14 +1801,12 @@ function endCall() {
                     track.stop()
             );
 
-
         localStream =
             null;
     }
 
 
     if (localVideo) {
-
         localVideo.srcObject =
             null;
     }
@@ -2633,6 +1816,13 @@ function endCall() {
         "empty"
     );
 
+
+    /*
+     * Important:
+     * Don't destroy permanent room.
+     *
+     * Rejoin own room after leaving.
+     */
 
     socket.emit(
         "leave-room"
@@ -2682,14 +1872,8 @@ if (myRoomBtn) {
         "click",
         () => {
 
-            hackerBeep(
-                "action"
-            );
-
-
             const code =
                 getPermanentRoomCode();
-
 
             if (myRoomValue) {
 
@@ -2697,11 +1881,9 @@ if (myRoomBtn) {
                     code;
             }
 
-
             createQRCode(
                 code
             );
-
 
             toggleOverlay(
                 myRoomOverlay
@@ -2732,7 +1914,6 @@ function createQRCode(
     if (!qrcode) {
         return;
     }
-
 
     qrcode.innerHTML =
         "";
@@ -2778,7 +1959,6 @@ function createQRCode(
 
 
     if (qrBox) {
-
         qrBox.classList.remove(
             "hidden"
         );
@@ -2796,14 +1976,8 @@ if (copyRoomBtn) {
         "click",
         async () => {
 
-            hackerBeep(
-                "action"
-            );
-
-
             const code =
                 getPermanentRoomCode();
-
 
             try {
 
@@ -2813,10 +1987,8 @@ if (copyRoomBtn) {
                         code
                     );
 
-
                 copyRoomBtn.textContent =
                     "✓ COPIED";
-
 
                 setTimeout(
                     () => {
@@ -2850,27 +2022,14 @@ if (joinRoomBtn) {
         "click",
         () => {
 
-            const sound =
-                getHackerAudio();
-
-            if (sound) {
-                hackerBeep(
-                    "action"
-                );
-            }
-
-
             if (joinRoomInput) {
-
                 joinRoomInput.value =
                     "";
             }
 
-
             openOverlay(
                 joinRoomOverlay
             );
-
 
             setTimeout(
                 () => {
@@ -2905,11 +2064,6 @@ if (joinRoomConfirmBtn) {
         "click",
         () => {
 
-            hackerBeep(
-                "action"
-            );
-
-
             const target =
                 joinRoomInput
                     ?.value
@@ -2936,9 +2090,7 @@ if (joinRoomConfirmBtn) {
                     joinRoomOverlay
                 );
 
-
                 joinOwnRoom();
-
 
                 return;
             }
@@ -2948,6 +2100,11 @@ if (joinRoomConfirmBtn) {
                 joinRoomOverlay
             );
 
+
+            /*
+             * Tell server to send
+             * call request to room.
+             */
 
             socket.emit(
                 "call-user",
@@ -2995,15 +2152,9 @@ socket.on(
     "call-ringing",
     data => {
 
-        hackerBeep(
-            "click"
-        );
-
-
         setStatus(
             `Calling ${data?.room || "room"}...`
         );
-
 
         showConnecting(
             "Waiting for answer..."
@@ -3016,19 +2167,12 @@ socket.on(
     "call-unavailable",
     data => {
 
-        hackerBeep(
-            "shutdown"
-        );
-
-
         hideConnecting();
-
 
         alert(
             data?.message ||
             "Room unavailable."
         );
-
 
         setStatus(
             "Room unavailable."
@@ -3050,12 +2194,10 @@ socket.on(
             data?.from ||
             null;
 
-
         incomingCallerRoom =
             data?.callerRoom ||
             data?.room ||
             "";
-
 
         const callerName =
             data?.callerName ||
@@ -3068,15 +2210,6 @@ socket.on(
             incomingCallerText.textContent =
                 `${callerName} is calling you`;
         }
-
-
-        /*
-         * LOUD HACKER ALERT
-         */
-
-        hackerBeep(
-            "alert"
-        );
 
 
         openCallOverlay();
@@ -3099,20 +2232,13 @@ if (acceptCallBtn) {
         "click",
         async () => {
 
-            hackerBeep(
-                "action"
-            );
-
-
             closeCallOverlay();
-
 
             activeCall =
                 true;
 
 
             if (!localStream) {
-
                 await startCamera();
             }
 
@@ -3150,11 +2276,6 @@ if (rejectCallBtn) {
         "click",
         () => {
 
-            hackerBeep(
-                "shutdown"
-            );
-
-
             socket.emit(
                 "reject-call",
                 {
@@ -3169,10 +2290,8 @@ if (rejectCallBtn) {
 
             closeCallOverlay();
 
-
             incomingCallerId =
                 null;
-
 
             incomingCallerRoom =
                 null;
@@ -3194,13 +2313,7 @@ socket.on(
     "call-accepted",
     async data => {
 
-        hackerBeep(
-            "action"
-        );
-
-
         hideConnecting();
-
 
         activeCall =
             true;
@@ -3217,10 +2330,8 @@ socket.on(
         ) {
 
             if (!localStream) {
-
                 await startCamera();
             }
-
 
             await createPeer(
                 peerId,
@@ -3244,13 +2355,7 @@ socket.on(
     "call-rejected",
     () => {
 
-        hackerBeep(
-            "shutdown"
-        );
-
-
         hideConnecting();
-
 
         setStatus(
             "Call rejected."
@@ -3308,7 +2413,6 @@ function showConnecting(
             "Establishing connection...";
     }
 
-
     connectingOverlay
         ?.classList
         .remove(
@@ -3339,7 +2443,6 @@ function openOverlay(
         return;
     }
 
-
     element.classList.remove(
         "hidden"
     );
@@ -3354,7 +2457,6 @@ function closeOverlay(
         return;
     }
 
-
     element.classList.add(
         "hidden"
     );
@@ -3368,7 +2470,6 @@ function toggleOverlay(
     if (!element) {
         return;
     }
-
 
     element.classList.toggle(
         "hidden"
@@ -3391,7 +2492,6 @@ function toggleOverlay(
         if (!overlay) {
             return;
         }
-
 
         overlay.addEventListener(
             "click",
@@ -3427,7 +2527,6 @@ function getFriends() {
                 ) || "[]"
             );
 
-
         return Array.isArray(
             data
         )
@@ -3460,10 +2559,8 @@ function renderFriends() {
         return;
     }
 
-
     friendsList.innerHTML =
         "";
-
 
     const friends =
         getFriends();
@@ -3475,7 +2572,6 @@ function renderFriends() {
             `<div class="friends-empty">
                 No friends saved yet.
             </div>`;
-
 
         return;
     }
@@ -3489,7 +2585,6 @@ function renderFriends() {
                     "div"
                 );
 
-
             item.className =
                 "friend-item";
 
@@ -3498,7 +2593,6 @@ function renderFriends() {
                 document.createElement(
                     "div"
                 );
-
 
             info.className =
                 "friend-info";
@@ -3509,10 +2603,8 @@ function renderFriends() {
                     "div"
                 );
 
-
             name.className =
                 "friend-name";
-
 
             name.textContent =
                 friend.name;
@@ -3523,10 +2615,8 @@ function renderFriends() {
                     "div"
                 );
 
-
             room.className =
                 "friend-room";
-
 
             room.textContent =
                 friend.room;
@@ -3535,7 +2625,6 @@ function renderFriends() {
             info.appendChild(
                 name
             );
-
 
             info.appendChild(
                 room
@@ -3547,14 +2636,11 @@ function renderFriends() {
                     "button"
                 );
 
-
             call.className =
                 "friend-call";
 
-
             call.type =
                 "button";
-
 
             call.textContent =
                 "CALL";
@@ -3574,7 +2660,6 @@ function renderFriends() {
             item.appendChild(
                 info
             );
-
 
             item.appendChild(
                 call
@@ -3599,13 +2684,7 @@ if (friendsBtn) {
         "click",
         () => {
 
-            hackerBeep(
-                "action"
-            );
-
-
             renderFriends();
-
 
             openOverlay(
                 friendsOverlay
@@ -3635,16 +2714,10 @@ if (addFriendConfirmBtn) {
         "click",
         () => {
 
-            hackerBeep(
-                "action"
-            );
-
-
             const name =
                 friendNameInput
                     ?.value
                     .trim();
-
 
             const room =
                 friendRoomInput
@@ -3722,16 +2795,13 @@ if (addFriendConfirmBtn) {
 
 
             friends.push({
-
                 id:
                     Date.now()
                     .toString(),
 
                 name:
-                    name.slice(
-                        0,
-                        40
-                    ),
+                    name
+                    .slice(0, 40),
 
                 room:
                     room
@@ -3746,13 +2816,11 @@ if (addFriendConfirmBtn) {
             friendNameInput.value =
                 "";
 
-
             friendRoomInput.value =
                 "";
 
 
             renderFriends();
-
 
             setStatus(
                 `${name} added to friends.`
@@ -3773,11 +2841,6 @@ function callFriend(
     if (!targetRoom) {
         return;
     }
-
-
-    hackerBeep(
-        "action"
-    );
 
 
     closeOverlay(
@@ -3821,17 +2884,11 @@ if (chatBtn) {
         "click",
         () => {
 
-            hackerBeep(
-                "action"
-            );
-
-
             chatPanel
                 ?.classList
                 .toggle(
                     "hidden"
                 );
-
 
             if (
                 !chatPanel?.classList.contains(
@@ -3841,9 +2898,7 @@ if (chatBtn) {
 
                 setTimeout(
                     () => {
-
                         chatInput?.focus();
-
                     },
                     100
                 );
@@ -3859,9 +2914,11 @@ if (chatCloseBtn) {
         "click",
         () => {
 
-            closeOverlay(
-                chatPanel
-            );
+            chatPanel
+                ?.classList
+                .add(
+                    "hidden"
+                );
         }
     );
 }
@@ -3892,32 +2949,7 @@ if (chatSendBtn) {
 
     chatSendBtn.addEventListener(
         "click",
-        () => {
-
-            hackerBeep(
-                "action"
-            );
-
-
-            /*
-             * If media is selected,
-             * Send button sends media.
-             */
-            if (
-                selectedMediaFile
-            ) {
-
-                sendMediaFile(
-                    selectedMediaFile
-                );
-
-
-                return;
-            }
-
-
-            sendChatMessage();
-        }
+        sendChatMessage
     );
 }
 
@@ -3935,7 +2967,6 @@ if (chatInput) {
             ) {
 
                 event.preventDefault();
-
 
                 sendChatMessage();
             }
@@ -4062,7 +3093,6 @@ function sendChatMessage() {
     chatInput.value =
         "";
 
-
     clearReply();
 }
 
@@ -4078,7 +3108,6 @@ socket.on(
         const message =
             data?.message ||
             data;
-
 
         if (!message) {
             return;
@@ -4120,7 +3149,6 @@ function appendChatMessage(
             ".chat-empty"
         );
 
-
     if (empty) {
         empty.remove();
     }
@@ -4130,7 +3158,6 @@ function appendChatMessage(
         document.createElement(
             "div"
         );
-
 
     wrapper.className =
         "chat-message " +
@@ -4146,10 +3173,8 @@ function appendChatMessage(
             "div"
         );
 
-
     sender.className =
         "chat-sender";
-
 
     sender.textContent =
         mine
@@ -4166,7 +3191,7 @@ function appendChatMessage(
 
 
     /*
-     * Reply preview.
+     * Reply preview
      */
 
     if (
@@ -4178,14 +3203,11 @@ function appendChatMessage(
                 "div"
             );
 
-
         reply.className =
             "chat-reply-preview";
 
-
         reply.textContent =
             `↪ ${message.replyTo.text || "Message"}`;
-
 
         wrapper.appendChild(
             reply
@@ -4208,14 +3230,11 @@ function appendChatMessage(
                 "div"
             );
 
-
         text.className =
             "chat-text";
 
-
         text.textContent =
             message.text;
-
 
         wrapper.appendChild(
             text
@@ -4250,10 +3269,8 @@ function appendChatMessage(
             "div"
         );
 
-
     time.className =
         "chat-time";
-
 
     time.textContent =
         formatTime(
@@ -4267,7 +3284,7 @@ function appendChatMessage(
 
 
     /*
-     * Reply button.
+     * Reply button
      */
 
     const replyButton =
@@ -4275,14 +3292,11 @@ function appendChatMessage(
             "button"
         );
 
-
     replyButton.className =
         "chat-reply-button";
 
-
     replyButton.type =
         "button";
-
 
     replyButton.textContent =
         "↩ REPLY";
@@ -4330,19 +3344,15 @@ function appendMediaMessage(
                 "div"
             );
 
-
         waiting.className =
             "chat-text";
-
 
         waiting.textContent =
             "Receiving media...";
 
-
         wrapper.appendChild(
             waiting
         );
-
 
         return;
     }
@@ -4358,23 +3368,18 @@ function appendMediaMessage(
                 "img"
             );
 
-
         image.className =
             "chat-media";
 
-
         image.src =
             message.url;
-
 
         image.alt =
             message.name ||
             "Photo";
 
-
         image.loading =
             "lazy";
-
 
         wrapper.appendChild(
             image
@@ -4392,22 +3397,17 @@ function appendMediaMessage(
                 "video"
             );
 
-
         video.className =
             "chat-media";
-
 
         video.src =
             message.url;
 
-
         video.controls =
             true;
 
-
         video.playsInline =
             true;
-
 
         wrapper.appendChild(
             video
@@ -4420,10 +3420,8 @@ function appendMediaMessage(
             "div"
         );
 
-
     info.className =
         "chat-media-info";
-
 
     info.textContent =
         message.name ||
@@ -4435,22 +3433,18 @@ function appendMediaMessage(
             "span"
         );
 
-
     size.className =
         "chat-media-size";
 
-
     size.textContent =
         formatMB(
-            message.size ||
-            0
+            message.size || 0
         );
 
 
     info.appendChild(
         size
     );
-
 
     wrapper.appendChild(
         info
@@ -4471,7 +3465,6 @@ function formatTime(
             timestamp ||
             Date.now()
         );
-
 
     return date.toLocaleTimeString(
         [],
@@ -4494,17 +3487,11 @@ function setReplyTarget(
     message
 ) {
 
-    hackerBeep(
-        "click"
-    );
-
-
     replyTarget =
         message;
 
 
     if (chatReplyBar) {
-
         chatReplyBar.classList.remove(
             "hidden"
         );
@@ -4557,11 +3544,6 @@ if (chatFileBtn) {
         "click",
         () => {
 
-            hackerBeep(
-                "action"
-            );
-
-
             chatFileInput?.click();
         }
     );
@@ -4576,7 +3558,6 @@ if (chatFileInput) {
 
             const file =
                 chatFileInput.files?.[0];
-
 
             if (!file) {
                 return;
@@ -4594,6 +3575,10 @@ if (chatFileInput) {
                     1024
                 );
 
+
+            /*
+             * Show exact size BEFORE sending.
+             */
 
             if (chatMediaName) {
 
@@ -4617,7 +3602,7 @@ if (chatFileInput) {
 
 
             /*
-             * Size check.
+             * Important size warning.
              */
 
             if (
@@ -4630,25 +3615,34 @@ if (chatFileInput) {
                     `Maximum allowed size ${MAX_MEDIA_MB} MB hai.`
                 );
 
-
                 clearSelectedMedia();
-
 
                 return;
             }
 
 
             /*
-             * IMPORTANT:
-             * Do NOT send automatically.
-             *
-             * User can now see the size
-             * and press Chat Send button.
+             * Ask before sending.
              */
 
-            setStatus(
-                `${file.name} selected — ${sizeMB.toFixed(2)} MB`
-            );
+            const send =
+                confirm(
+                    `${file.name}\n\n` +
+                    `Size: ${sizeMB.toFixed(2)} MB\n\n` +
+                    `Kya ise send karna hai?`
+                );
+
+
+            if (send) {
+
+                sendMediaFile(
+                    file
+                );
+
+            } else {
+
+                clearSelectedMedia();
+            }
         }
     );
 }
@@ -4674,7 +3668,6 @@ function clearSelectedMedia() {
 
 
     if (chatFileInput) {
-
         chatFileInput.value =
             "";
     }
@@ -4726,9 +3719,7 @@ async function sendMediaFile(
             "Pehle room join karo."
         );
 
-
         clearSelectedMedia();
-
 
         return;
     }
@@ -4751,13 +3742,19 @@ async function sendMediaFile(
             `Maximum ${MAX_MEDIA_MB} MB allowed.`
         );
 
-
         clearSelectedMedia();
-
 
         return;
     }
 
+
+    /*
+     * Convert to Data URL.
+     *
+     * This is simple and works with
+     * a Socket.IO server that relays
+     * chat-media events.
+     */
 
     try {
 
@@ -4824,7 +3821,7 @@ async function sendMediaFile(
 
 
         /*
-         * Show immediately.
+         * Show immediately for sender.
          */
 
         appendChatMessage(
@@ -4870,11 +3867,9 @@ async function sendMediaFile(
             error
         );
 
-
         alert(
             "Media send nahi ho paya."
         );
-
 
         clearSelectedMedia();
     }
@@ -4932,7 +3927,6 @@ socket.on(
             data?.message ||
             data;
 
-
         if (!message) {
             return;
         }
@@ -4954,7 +3948,6 @@ socket.on(
                 message,
                 false
             );
-
 
             return;
         }
@@ -5030,11 +4023,6 @@ if (scanBtn) {
 
 async function startScanner() {
 
-    hackerBeep(
-        "action"
-    );
-
-
     if (
         typeof Html5Qrcode ===
         "undefined"
@@ -5043,7 +4031,6 @@ async function startScanner() {
         alert(
             "QR scanner library load nahi hui."
         );
-
 
         return;
     }
@@ -5088,11 +4075,6 @@ async function startScanner() {
 
             async decodedText => {
 
-                hackerBeep(
-                    "action"
-                );
-
-
                 let code =
                     decodedText;
 
@@ -5104,15 +4086,12 @@ async function startScanner() {
                             decodedText
                         );
 
-
                     const urlRoom =
                         url.searchParams.get(
                             "room"
                         );
 
-
                     if (urlRoom) {
-
                         code =
                             urlRoom;
                     }
@@ -5138,7 +4117,6 @@ async function startScanner() {
                     await scannerInstance
                         .stop();
 
-
                     await scannerInstance
                         .clear();
 
@@ -5156,6 +4134,10 @@ async function startScanner() {
                         code;
                 }
 
+
+                /*
+                 * Call scanned room.
+                 */
 
                 closeOverlay(
                     joinRoomOverlay
@@ -5197,11 +4179,9 @@ async function startScanner() {
             error
         );
 
-
         scanner.classList.add(
             "hidden"
         );
-
 
         alert(
             "QR scanner camera open nahi hua."
@@ -5218,7 +4198,6 @@ const urlParams =
     new URLSearchParams(
         window.location.search
     );
-
 
 const roomFromUrl =
     urlParams.get(
@@ -5244,10 +4223,14 @@ if (roomFromUrl) {
 
                 joinOwnRoom();
 
-
                 return;
             }
 
+
+            /*
+             * Open join panel and
+             * prefill target room.
+             */
 
             if (joinRoomInput) {
 
@@ -5276,6 +4259,12 @@ socket.on(
 
         setTimeout(
             () => {
+
+                /*
+                 * If URL contains another
+                 * room, don't automatically
+                 * join own room.
+                 */
 
                 if (
                     !roomFromUrl
@@ -5316,10 +4305,14 @@ function setupUserName() {
                     40
                 );
 
-
         return;
     }
 
+
+    /*
+     * Don't force prompt on every
+     * page load. Use generic name.
+     */
 
     userName =
         "USER";
@@ -5369,38 +4362,27 @@ console.log(
     "color:#00ff66;font-size:20px;font-weight:bold"
 );
 
-
 console.log(
     "Camera Switch:",
     !!switchCameraBtn
 );
-
 
 console.log(
     "Mirror:",
     !!mirrorBtn
 );
 
-
 console.log(
     "Filters:",
     filterOptions.length
 );
-
 
 console.log(
     "Chat:",
     !!chatPanel
 );
 
-
 console.log(
     "Friends:",
     !!friendsList
-);
-
-
-console.log(
-    "Hacker Sound:",
-    "ENABLED"
 );
